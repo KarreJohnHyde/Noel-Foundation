@@ -63,7 +63,7 @@ export default function HumanVerification({
   onToken,
   resetKey,
 }: {
-  action: "contact" | "volunteer" | "csr";
+  action: "contact" | "volunteer" | "csr" | "feedback" | "donate";
   onToken: (token: string) => void;
   resetKey: number;
 }) {

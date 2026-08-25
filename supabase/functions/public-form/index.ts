@@ -51,13 +51,15 @@ const allowedFields = new Set([
   "communicationPreference",
   "partnershipModel",
   "outcomeGoal",
+  "rating",
+  "pageContext",
   "consent",
   "website",
   "startedAt",
   "turnstileToken",
 ]);
 
-type FormKind = "contact" | "volunteer" | "csr";
+type FormKind = "contact" | "volunteer" | "csr" | "feedback";
 type JsonRecord = Record<string, unknown>;
 
 class RequestError extends Error {
@@ -182,6 +184,7 @@ function makeReference(kind: FormKind) {
     contact: "C",
     volunteer: "V",
     csr: "P",
+    feedback: "F",
   };
   const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -398,35 +401,50 @@ function buildRecord(payload: JsonRecord, kind: FormKind, submissionId: string, 
     };
   }
 
-  return {
-    submission_id: submissionId,
-    reference,
-    ...common,
-    organisation: readString(payload, "organisation", {
-      required: true,
-      min: 2,
-      max: 160,
-    }),
-    cause: requireOption(
-      readString(payload, "cause", { required: true, min: 2, max: 120 }),
-      csrProgrammes,
-      "cause",
-    ),
-    partnership_model: requireOption(
-      readString(payload, "partnershipModel", {
+  if (kind === "csr")
+    return {
+      submission_id: submissionId,
+      reference,
+      ...common,
+      organisation: readString(payload, "organisation", {
         required: true,
         min: 2,
         max: 160,
       }),
-      partnershipModels,
-      "partnershipModel",
-    ),
-    outcome_goal: requireOption(
-      readString(payload, "outcomeGoal", { required: true, min: 2, max: 160 }),
-      outcomeGoals,
-      "outcomeGoal",
-    ),
-    message: readString(payload, "message", { max: 4000 }),
+      cause: requireOption(
+        readString(payload, "cause", { required: true, min: 2, max: 120 }),
+        csrProgrammes,
+        "cause",
+      ),
+      partnership_model: requireOption(
+        readString(payload, "partnershipModel", {
+          required: true,
+          min: 2,
+          max: 160,
+        }),
+        partnershipModels,
+        "partnershipModel",
+      ),
+      outcome_goal: requireOption(
+        readString(payload, "outcomeGoal", { required: true, min: 2, max: 160 }),
+        outcomeGoals,
+        "outcomeGoal",
+      ),
+      message: readString(payload, "message", { max: 4000 }),
+      consent_at: consentAt,
+    };
+
+  const rating = payload.rating;
+  if (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new RequestError(400, "rating is invalid.");
+  }
+  return {
+    submission_id: submissionId,
+    reference,
+    ...common,
+    rating,
+    page_context: readString(payload, "pageContext", { required: true, min: 1, max: 160 }),
+    message: readString(payload, "message", { required: true, min: 10, max: 4000 }),
     consent_at: consentAt,
   };
 }
@@ -515,7 +533,7 @@ Deno.serve(async (request) => {
     if (unknownFields.length) throw new RequestError(400, "The request contains unknown fields.");
 
     const kind = payload.kind;
-    if (kind !== "contact" && kind !== "volunteer" && kind !== "csr") {
+    if (kind !== "contact" && kind !== "volunteer" && kind !== "csr" && kind !== "feedback") {
       throw new RequestError(400, "kind is invalid.");
     }
     const submissionId = readString(payload, "submissionId", {
@@ -533,6 +551,7 @@ Deno.serve(async (request) => {
       contact: "contact_messages",
       volunteer: "volunteer_applications",
       csr: "csr_enquiries",
+      feedback: "website_feedback",
     };
     const table = tables[kind];
 

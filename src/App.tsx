@@ -28,6 +28,8 @@ import {
 } from "./content";
 import {
   backendConfigured,
+  checkoutBackendConfigured,
+  createDonationCheckout,
   fetchPublicImpactMetrics,
   impactBackendConfigured,
   submitPublicForm,
@@ -684,12 +686,24 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
 }
 
 function Hero({ navigate }: { navigate: Navigate }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [soundOn, setSoundOn] = useState(false);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    if (videoRef.current) {
+      videoRef.current.muted = !next;
+      if (next) void videoRef.current.play().catch(() => setSoundOn(false));
+    }
+  };
   return (
     <section className="home-hero">
       <video
+        ref={videoRef}
         className="home-hero__video"
         autoPlay
-        muted
+        muted={!soundOn}
         loop
         playsInline
         preload="metadata"
@@ -698,6 +712,14 @@ function Hero({ navigate }: { navigate: Navigate }) {
       >
         <source src="/media/noel-foundation-intro.mp4" type="video/mp4" />
       </video>
+      <button
+        type="button"
+        className="home-hero__sound"
+        aria-pressed={soundOn}
+        onClick={toggleSound}
+      >
+        <Icon name={soundOn ? "pause" : "play"} /> {soundOn ? "Sound on" : "Play film sound"}
+      </button>
       <div className="home-hero__veil" aria-hidden="true" />
       <div className="container-shell home-hero__grid">
         <div className="home-hero__copy">
@@ -2760,6 +2782,515 @@ function ProgramsPage({ path, navigate }: { path: string; navigate: Navigate }) 
   );
 }
 
+const representativeGoals = [
+  {
+    value: 1240,
+    target: 2000,
+    label: "Children's hearts supported",
+    scope: "Children's Health",
+    insight: "Primary health reach across screening, diagnosis and care pathways.",
+    icon: "heart" as IconName,
+    featured: true,
+  },
+  {
+    value: 386,
+    target: 600,
+    label: "Heart surgeries funded",
+    scope: "Children's Health",
+    insight: "The most direct planning indicator for critical cardiac intervention support.",
+    icon: "heart" as IconName,
+    featured: true,
+  },
+  {
+    value: 2150,
+    target: 3000,
+    label: "Students sponsored",
+    scope: "Education",
+    insight: "Tracks planned access to learning resources, sponsorship and mentoring.",
+    icon: "report" as IconName,
+  },
+  {
+    value: 920,
+    target: 1500,
+    label: "Women trained for livelihoods",
+    scope: "Women's Livelihoods",
+    insight: "Tracks the pathway from skills development toward economic participation.",
+    icon: "leaf" as IconName,
+  },
+  {
+    value: 5400,
+    target: 8000,
+    label: "Families impacted",
+    scope: "Community",
+    insight: "A planning view of households reached across connected programme activity.",
+    icon: "people" as IconName,
+  },
+  {
+    value: 48,
+    target: 75,
+    label: "CSR partners engaged",
+    scope: "Partnerships",
+    insight: "Shows the partnership base needed to fund and scale responsible delivery.",
+    icon: "people" as IconName,
+  },
+];
+
+const representativeMonthly = [620, 1080, 1740, 2500, 3260, 4020, 4760, 5400];
+const representativeMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
+const representativeVerticals = [
+  { label: "Health", value: 5400, featured: true, insight: "Children and families reached" },
+  { label: "Education", value: 2150, insight: "Students in the planning view" },
+  { label: "Livelihoods", value: 920, insight: "Women in skills pathways" },
+  { label: "Community", value: 1680, insight: "People reached through outreach" },
+];
+const representativeAllocation = [
+  { label: "Children's Health", value: 40, featured: true, color: "#d94c16" },
+  { label: "Education", value: 30, color: "#1d448f" },
+  { label: "Women's Livelihoods", value: 20, color: "#d7a225" },
+  { label: "Programme Operations", value: 10, color: "#817a74" },
+];
+
+function RepresentativeImpactTracker({ navigate }: { navigate: Navigate }) {
+  const [selectedGoalIndex, setSelectedGoalIndex] = useState(0);
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(representativeMonthly.length - 1);
+  const [selectedVerticalIndex, setSelectedVerticalIndex] = useState(0);
+  const [fundingAmount, setFundingAmount] = useState(500000);
+  const [selectedAllocationIndex, setSelectedAllocationIndex] = useState(0);
+  const linePoints = representativeMonthly
+    .map((value, index) => `${index * 100},${220 - (value / 6000) * 190}`)
+    .join(" ");
+  const activeGoal = representativeGoals[selectedGoalIndex];
+  const activeGoalProgress = Math.round((activeGoal.value / activeGoal.target) * 100);
+  const activeGoalGap = activeGoal.target - activeGoal.value;
+  const selectedMonthValue = representativeMonthly[selectedMonthIndex];
+  const selectedMonthChange =
+    selectedMonthIndex === 0
+      ? selectedMonthValue
+      : selectedMonthValue - representativeMonthly[selectedMonthIndex - 1];
+  const activeVertical = representativeVerticals[selectedVerticalIndex];
+  const verticalTotal = representativeVerticals.reduce((sum, item) => sum + item.value, 0);
+  const activeVerticalShare = Math.round((activeVertical.value / verticalTotal) * 100);
+  const activeAllocation = representativeAllocation[selectedAllocationIndex];
+  const activeAllocationAmount = Math.round((fundingAmount * activeAllocation.value) / 100);
+  const donationCause =
+    activeAllocation.label === "Programme Operations"
+      ? "Where Needed Most"
+      : activeAllocation.label;
+  const formatNumber = (value: number) => new Intl.NumberFormat("en-IN").format(value);
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  return (
+    <section className="section representative-impact" id="progress-to-goals">
+      <div className="container-shell">
+        <div className="representative-impact__intro">
+          <SectionHeading
+            eyebrow="Impact tracker"
+            title={
+              <>
+                Measurable change, <em>tracked in the open.</em>
+              </>
+            }
+            description="Every programme is designed around clear objectives, beneficiary targets and impact indicators. This planning tracker shows the requested representative figures while official records move through verification."
+          />
+          <div className="representative-impact__actions">
+            <InternalLink href="/donate" navigate={navigate} className="button button--primary">
+              Support the mission <Icon name="heart" />
+            </InternalLink>
+            <InternalLink href="/csr" navigate={navigate} className="button button--secondary">
+              Partner with us <Icon name="arrow" />
+            </InternalLink>
+          </div>
+        </div>
+        <div className="investor-signal-strip" aria-label="Impact planning highlights">
+          {[
+            ["62%", "Children's hearts goal", "1,240 of 2,000 planned"],
+            ["64%", "Heart surgery goal", "386 of 600 planned"],
+            ["40%", "Health allocation", "Largest planned fund share"],
+            ["8 months", "Trend window", "January through August"],
+          ].map(([value, label, context], index) => (
+            <button
+              type="button"
+              key={label}
+              className={index < 2 ? "investor-signal investor-signal--health" : "investor-signal"}
+              onClick={() => {
+                if (index < 2) setSelectedGoalIndex(index);
+                if (index === 2) setSelectedAllocationIndex(0);
+                if (index === 3) setSelectedMonthIndex(representativeMonthly.length - 1);
+              }}
+            >
+              <strong>{value}</strong>
+              <span>{label}</span>
+              <small>{context}</small>
+            </button>
+          ))}
+        </div>
+        <div className="representative-note" role="note">
+          <Icon name="report" />
+          <p>
+            <strong>Planning view — not verified public evidence.</strong>
+            Figures shown are representative pending official verified data. They remain separate
+            from the approved public metric ledger below.
+          </p>
+        </div>
+
+        <div className="tracker-section-heading">
+          <div>
+            <p className="eyebrow">Progress to goals</p>
+            <h2>Where we stand this year.</h2>
+          </div>
+          <span>FY 2025–26 planning view</span>
+        </div>
+        <div className="goal-grid">
+          {representativeGoals.map((goal, index) => {
+            const progress = Math.round((goal.value / goal.target) * 100);
+            return (
+              <article
+                key={goal.label}
+                className={`${goal.featured ? "goal-card goal-card--health" : "goal-card"}${selectedGoalIndex === index ? " is-active" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="goal-card__button"
+                  aria-pressed={selectedGoalIndex === index}
+                  onClick={() => setSelectedGoalIndex(index)}
+                >
+                  <div className="goal-card__head">
+                    <span>
+                      <Icon name={goal.icon} />
+                    </span>
+                    <small>{goal.featured ? "Children's health priority" : goal.scope}</small>
+                  </div>
+                  <p className="goal-card__value">
+                    <strong>{formatNumber(goal.value)}+</strong>
+                    <span>/ {formatNumber(goal.target)}</span>
+                  </p>
+                  <h3>{goal.label}</h3>
+                  <div className="goal-card__meta">
+                    <span>Progress to goal</span>
+                    <strong>{progress}%</strong>
+                  </div>
+                  <div
+                    className="goal-card__track"
+                    role="progressbar"
+                    aria-label={`${goal.label}: ${progress}%`}
+                    aria-valuenow={progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <span style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="goal-card__reveal">
+                    <span>{formatNumber(goal.target - goal.value)} remaining</span>
+                    <strong>
+                      Explore goal <Icon name="arrow" />
+                    </strong>
+                  </div>
+                </button>
+              </article>
+            );
+          })}
+        </div>
+
+        <aside className="investor-lens" aria-live="polite">
+          <div className="investor-lens__identity">
+            <span>
+              <Icon name={activeGoal.icon} />
+            </span>
+            <div>
+              <p className="eyebrow">Selected investor lens</p>
+              <h3>{activeGoal.label}</h3>
+              <p>{activeGoal.insight}</p>
+            </div>
+          </div>
+          <div className="investor-lens__facts">
+            <p>
+              <span>Planning progress</span>
+              <strong>{activeGoalProgress}%</strong>
+            </p>
+            <p>
+              <span>Gap to target</span>
+              <strong>{formatNumber(activeGoalGap)}</strong>
+            </p>
+            <p>
+              <span>Programme</span>
+              <strong>{activeGoal.scope}</strong>
+            </p>
+            <p>
+              <span>Evidence status</span>
+              <strong>Pending verification</strong>
+            </p>
+          </div>
+          <a href="#funding-scenario" className="button button--secondary">
+            Model a contribution <Icon name="trend" />
+          </a>
+        </aside>
+
+        <div className="tracker-section-heading tracker-section-heading--dashboard">
+          <div>
+            <p className="eyebrow">Data dashboard</p>
+            <h2>Impact, in numbers.</h2>
+          </div>
+          <span>Representative visual model</span>
+        </div>
+        <div className="impact-dashboard-grid">
+          <article className="impact-chart-card impact-chart-card--wide">
+            <div className="impact-chart-card__head">
+              <div>
+                <h3>Cumulative families impacted</h3>
+                <p>Month-on-month planning view, FY 2025–26 · select a point</p>
+              </div>
+              <div className="chart-selection" aria-live="polite">
+                <strong>{formatNumber(selectedMonthValue)}+</strong>
+                <span>
+                  {representativeMonths[selectedMonthIndex]} · +{formatNumber(selectedMonthChange)}
+                </span>
+              </div>
+            </div>
+            <div
+              className="line-chart"
+              aria-label="Cumulative families impacted from January to August"
+            >
+              <div className="line-chart__axis" aria-hidden="true">
+                {[6000, 4500, 3000, 1500, 0].map((value) => (
+                  <span key={value}>{value}</span>
+                ))}
+              </div>
+              <div className="line-chart__plot">
+                <svg
+                  viewBox="0 0 700 230"
+                  role="img"
+                  aria-label="Growth from 620 in January to 5,400 in August"
+                >
+                  <path d={`M ${linePoints} L 700 220 L 0 220 Z`} fill="rgba(217, 76, 22, 0.1)" />
+                  <polyline
+                    points={linePoints}
+                    fill="none"
+                    stroke="#d94c16"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {representativeMonthly.map((value, index) => {
+                    const pointY = 220 - (value / 6000) * 190;
+                    return (
+                      <g key={representativeMonths[index]}>
+                        <circle
+                          className={selectedMonthIndex === index ? "is-active" : ""}
+                          cx={index * 100}
+                          cy={pointY}
+                          r={selectedMonthIndex === index ? 9 : 6}
+                          fill="#fff"
+                          stroke="#d94c16"
+                          strokeWidth="4"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${representativeMonths[index]}: ${formatNumber(value)} cumulative families`}
+                          onClick={() => setSelectedMonthIndex(index)}
+                          onFocus={() => setSelectedMonthIndex(index)}
+                          onKeyDown={(event) => {
+                            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                              event.preventDefault();
+                              const direction = event.key === "ArrowLeft" ? -1 : 1;
+                              setSelectedMonthIndex((current) =>
+                                Math.min(
+                                  representativeMonthly.length - 1,
+                                  Math.max(0, current + direction),
+                                ),
+                              );
+                            }
+                          }}
+                        />
+                        {selectedMonthIndex === index ? (
+                          <text
+                            x={Math.min(655, Math.max(45, index * 100))}
+                            y={Math.max(18, pointY - 18)}
+                            textAnchor="middle"
+                            aria-hidden="true"
+                          >
+                            {formatNumber(value)}
+                          </text>
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="line-chart__months" aria-label="Select reporting month">
+                  {representativeMonths.map((month, index) => (
+                    <button
+                      type="button"
+                      key={month}
+                      className={selectedMonthIndex === index ? "is-active" : ""}
+                      aria-pressed={selectedMonthIndex === index}
+                      onClick={() => setSelectedMonthIndex(index)}
+                    >
+                      {month}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article className="impact-chart-card">
+            <div className="impact-chart-card__head">
+              <div>
+                <h3>Beneficiaries by vertical</h3>
+                <p>Lives reached across programme areas</p>
+              </div>
+            </div>
+            <div className="vertical-bars">
+              {representativeVerticals.map((item, index) => (
+                <button
+                  type="button"
+                  key={item.label}
+                  className={`${item.featured ? "vertical-bar vertical-bar--health" : "vertical-bar"}${selectedVerticalIndex === index ? " is-active" : ""}`}
+                  aria-pressed={selectedVerticalIndex === index}
+                  onClick={() => setSelectedVerticalIndex(index)}
+                >
+                  <div>
+                    <span style={{ height: `${Math.max(12, (item.value / 6000) * 100)}%` }} />
+                  </div>
+                  <strong>{formatNumber(item.value)}</strong>
+                  <small>{item.label}</small>
+                </button>
+              ))}
+            </div>
+            <p className="chart-insight" aria-live="polite">
+              <strong>{activeVertical.label}</strong> represents approximately {activeVerticalShare}
+              % of the values displayed in this programme comparison. {activeVertical.insight}.
+            </p>
+          </article>
+
+          <article className="impact-chart-card">
+            <div className="impact-chart-card__head">
+              <div>
+                <h3>Fund allocation</h3>
+                <p>How every rupee is planned across programmes</p>
+              </div>
+            </div>
+            <div className="allocation-chart">
+              <div
+                className="allocation-chart__donut"
+                aria-label="40% children's health, 30% education, 20% women's livelihoods and 10% programme operations"
+              >
+                <span>
+                  <strong>{activeAllocation.value}%</strong>
+                  <small>{activeAllocation.label}</small>
+                </span>
+              </div>
+              <div className="allocation-chart__legend">
+                {representativeAllocation.map((item, index) => (
+                  <button
+                    type="button"
+                    key={item.label}
+                    className={`${item.featured ? "is-health" : ""}${selectedAllocationIndex === index ? " is-active" : ""}`}
+                    aria-pressed={selectedAllocationIndex === index}
+                    onClick={() => setSelectedAllocationIndex(index)}
+                  >
+                    <span style={{ background: item.color }} />
+                    <p>
+                      <strong>{item.label}</strong>
+                      <small>{item.value}%</small>
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <section className="funding-scenario" id="funding-scenario" aria-labelledby="funding-title">
+          <div className="funding-scenario__intro">
+            <p className="eyebrow">Funding scenario</p>
+            <h2 id="funding-title">See how a contribution could be allocated.</h2>
+            <p>
+              Explore the current planning mix before starting a donation. Outcome quantities are
+              intentionally withheld until audited unit costs are approved.
+            </p>
+            <div className="funding-scenario__quick" aria-label="Suggested contribution amounts">
+              {[100000, 500000, 1000000, 5000000].map((amount) => (
+                <button
+                  type="button"
+                  key={amount}
+                  className={fundingAmount === amount ? "is-active" : ""}
+                  aria-pressed={fundingAmount === amount}
+                  onClick={() => setFundingAmount(amount)}
+                >
+                  {formatCurrency(amount)}
+                </button>
+              ))}
+            </div>
+            <label htmlFor="funding-amount">
+              <span>Contribution scenario</span>
+              <strong>{formatCurrency(fundingAmount)}</strong>
+            </label>
+            <input
+              id="funding-amount"
+              type="range"
+              min="50000"
+              max="10000000"
+              step="50000"
+              value={fundingAmount}
+              aria-valuetext={formatCurrency(fundingAmount)}
+              onChange={(event) => setFundingAmount(Number(event.currentTarget.value))}
+            />
+          </div>
+          <div className="funding-scenario__allocation">
+            <div className="funding-scenario__total">
+              <span>Selected allocation</span>
+              <strong>{formatCurrency(activeAllocationAmount)}</strong>
+              <small>
+                {activeAllocation.value}% to {activeAllocation.label}
+              </small>
+            </div>
+            <div className="funding-allocation-list">
+              {representativeAllocation.map((item, index) => {
+                const amount = Math.round((fundingAmount * item.value) / 100);
+                return (
+                  <button
+                    type="button"
+                    key={item.label}
+                    className={selectedAllocationIndex === index ? "is-active" : ""}
+                    aria-pressed={selectedAllocationIndex === index}
+                    onClick={() => setSelectedAllocationIndex(index)}
+                  >
+                    <span>
+                      <strong>{item.label}</strong>
+                      <small>{item.value}% of scenario</small>
+                    </span>
+                    <strong>{formatCurrency(amount)}</strong>
+                    <i aria-hidden="true">
+                      <span style={{ width: `${item.value}%`, background: item.color }} />
+                    </i>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="funding-scenario__cta">
+              <p>
+                <Icon name="shield" /> Planning illustration only. Final designation, compliance and
+                reporting are confirmed during donor onboarding.
+              </p>
+              <InternalLink
+                href={`/donate?amount=${fundingAmount}&cause=${encodeURIComponent(donationCause)}`}
+                navigate={navigate}
+                className="button button--primary"
+              >
+                Fund the mission <Icon name="heart" />
+              </InternalLink>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
 function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
   const live = path === "/impact/live" || path === "/impact/studio";
   const studio = path === "/impact/studio";
@@ -2829,6 +3360,7 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
           </InternalLink>
         ) : null}
       </PageHero>
+      <RepresentativeImpactTracker navigate={navigate} />
       <section className="section section--sand">
         <div className="container-shell">
           <div className="impact-header">
@@ -2989,6 +3521,185 @@ const storyPrograms = [
   "Women's Livelihoods",
   "Community",
 ];
+
+function StoryFeedback() {
+  const { submission, submit, reset, setVerificationToken, verificationResetKey } =
+    usePublicSubmission();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    rating: 0,
+    message: "",
+    consent: false,
+    website: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const sendFeedback = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors: Record<string, string> = {};
+    if (form.name.trim().length < 2) nextErrors.name = "Please enter your name.";
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = "Enter a valid email address.";
+    if (form.rating < 1 || form.rating > 5) nextErrors.rating = "Choose a rating from 1 to 5.";
+    if (form.message.trim().length < 10)
+      nextErrors.message = "Share at least 10 characters so the feedback is actionable.";
+    if (!form.consent) nextErrors.consent = "Consent is required to send feedback.";
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    await submit({
+      kind: "feedback",
+      name: form.name,
+      email: form.email,
+      rating: form.rating,
+      message: form.message,
+      pageContext: "/stories",
+      consent: form.consent,
+      website: form.website,
+    });
+  };
+
+  if (submission.status === "sent") {
+    return (
+      <section className="section story-feedback" id="impact-feedback">
+        <div className="container-shell story-feedback__success" role="status">
+          <span>
+            <Icon name="check" />
+          </span>
+          <div>
+            <p className="eyebrow">Feedback received</p>
+            <h2>Thank you for helping us improve.</h2>
+            <p>
+              Your private reference is <strong>{submission.reference}</strong>.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => {
+              setForm({ name: "", email: "", rating: 0, message: "", consent: false, website: "" });
+              reset();
+            }}
+          >
+            Send more feedback
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section story-feedback" id="impact-feedback">
+      <div className="container-shell story-feedback__grid">
+        <SectionHeading
+          eyebrow="Impact feedback"
+          title={
+            <>
+              Help us make the experience <em>more useful.</em>
+            </>
+          }
+          description="Tell us what was clear, what was missing and what would make the Foundation's work easier to understand. Feedback is private and never auto-published as a testimony."
+        />
+        <form className="story-feedback__form" onSubmit={sendFeedback} noValidate>
+          <div className="form-grid__two">
+            <TextField
+              label="Name *"
+              name="feedback-name"
+              autoComplete="name"
+              value={form.name}
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              error={errors.name}
+            />
+            <TextField
+              label="Email *"
+              name="feedback-email"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={(event) => setForm({ ...form, email: event.target.value })}
+              error={errors.email}
+            />
+          </div>
+          <fieldset className="feedback-rating">
+            <legend>How useful was this page? *</legend>
+            <div
+              role="radiogroup"
+              aria-label="Page usefulness rating"
+              onKeyDown={handleRadioGroupKeyDown}
+            >
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.rating === rating}
+                  tabIndex={form.rating ? (form.rating === rating ? 0 : -1) : rating === 1 ? 0 : -1}
+                  className={form.rating === rating ? "is-active" : ""}
+                  onClick={() => {
+                    setForm({ ...form, rating });
+                    setErrors({ ...errors, rating: "" });
+                  }}
+                >
+                  <span>{rating}</span>
+                  <small>{rating === 1 ? "Needs work" : rating === 5 ? "Excellent" : ""}</small>
+                </button>
+              ))}
+            </div>
+            {errors.rating ? <p className="field__error">{errors.rating}</p> : null}
+          </fieldset>
+          <TextAreaField
+            label="What should we improve? *"
+            name="feedback-message"
+            value={form.message}
+            onChange={(event) => setForm({ ...form, message: event.target.value })}
+            error={errors.message}
+            rows={5}
+          />
+          <div className="honeypot-field" aria-hidden="true">
+            <TextField
+              label="Website"
+              name="feedback-website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={form.website}
+              onChange={(event) => setForm({ ...form, website: event.target.value })}
+            />
+          </div>
+          <ConsentField
+            id="feedback-consent"
+            checked={form.consent}
+            onChange={(checked) => setForm({ ...form, consent: checked })}
+            error={errors.consent}
+          >
+            I consent to Noel Foundation using this feedback and my contact details to improve the
+            website.
+          </ConsentField>
+          <HumanVerification
+            action="feedback"
+            onToken={setVerificationToken}
+            resetKey={verificationResetKey}
+          />
+          {submission.status === "error" ? (
+            <p className="form-status form-status--error" role="alert">
+              {submission.message}
+            </p>
+          ) : null}
+          {submission.status === "fallback" ? (
+            <p className="form-status">Your email app will open with the feedback prepared.</p>
+          ) : null}
+          <button
+            type="submit"
+            className="button button--primary button--large"
+            disabled={submission.status === "sending"}
+          >
+            {submission.status === "sending" ? "Sending feedback…" : "Send private feedback"}{" "}
+            <Icon name="arrow" />
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
 
 function StoriesPage({ navigate }: { navigate: Navigate }) {
   const [programFilter, setProgramFilter] = useState("All programs");
@@ -3243,6 +3954,7 @@ function StoriesPage({ navigate }: { navigate: Navigate }) {
           )}
         </div>
       </section>
+      <StoryFeedback />
       <GetInvolved navigate={navigate} />
     </>
   );
@@ -3711,6 +4423,80 @@ function CSRPage({ navigate }: { navigate: Navigate }) {
           </div>
         </div>
       </section>
+      <section className="section section--sand">
+        <div className="container-shell csr-assurance-layout">
+          <SectionHeading
+            eyebrow="Why partner with Noel Foundation"
+            title={
+              <>
+                Community-centred delivery. <em>Accountable outcomes.</em>
+              </>
+            }
+            description="A strong partnership connects real community needs with a clear implementation model, responsible documentation and outcomes that can be reviewed together."
+          />
+          <div className="csr-assurance-grid">
+            {[
+              [
+                "Community-centred implementation",
+                "Programs are shaped close to communities and the people they are intended to support.",
+              ],
+              [
+                "Measurable outcomes",
+                "Objectives, beneficiary targets and impact indicators are agreed during program design.",
+              ],
+              [
+                "Transparent reporting",
+                "Partners receive appropriate documentation, delivery updates and impact reporting.",
+              ],
+              [
+                "Scalable programs",
+                "Successful interventions can expand responsibly across locations and beneficiary groups.",
+              ],
+              [
+                "Human-centred impact",
+                "Every number remains connected to the dignity, safety and agency of a person or family.",
+              ],
+            ].map(([title, description], index) => (
+              <article key={title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className="section partner-ecosystem">
+        <div className="container-shell">
+          <SectionHeading
+            eyebrow="Our partnership ecosystem"
+            title={
+              <>
+                Building impact through <em>collaboration.</em>
+              </>
+            }
+            description="Sustainable social transformation takes institutions, community knowledge and philanthropic commitment working together."
+            align="center"
+          />
+          <div className="partner-ecosystem__grid" aria-label="Organisations invited to partner">
+            {[
+              "Corporates",
+              "CSR Foundations",
+              "Family Foundations",
+              "Hospitals",
+              "Educational Institutions",
+              "Churches & Faith-Based Organisations",
+              "Community Organisations",
+              "Philanthropic Individuals",
+            ].map((partner) => (
+              <div key={partner}>
+                <Icon name="people" />
+                <strong>{partner}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       <section className="section section--cream" id="csr-builder">
         <div className="container-shell">
           <SectionHeading
@@ -4129,12 +4915,41 @@ function VolunteerPage({ navigate }: { navigate: Navigate }) {
 
 function DonatePage({ navigate }: { navigate: Navigate }) {
   const [step, setStep] = useState(1);
-  const [amount, setAmount] = useState<number | "custom" | null>(null);
-  const [customAmount, setCustomAmount] = useState("");
-  const [cause, setCause] = useState("");
+  const [amount, setAmount] = useState<number | "custom" | null>(() => {
+    const preset = Number(new URLSearchParams(window.location.search).get("amount"));
+    return Number.isInteger(preset) && preset >= 100 && preset <= 10_000_000 ? "custom" : null;
+  });
+  const [customAmount, setCustomAmount] = useState(() => {
+    const preset = Number(new URLSearchParams(window.location.search).get("amount"));
+    return Number.isInteger(preset) && preset >= 100 && preset <= 10_000_000 ? String(preset) : "";
+  });
+  const [cause, setCause] = useState(() => {
+    const preset = new URLSearchParams(window.location.search).get("cause") || "";
+    return ["Where Needed Most", "Children's Health", "Education", "Women's Livelihoods"].includes(
+      preset,
+    )
+      ? preset
+      : "";
+  });
   const [frequency, setFrequency] = useState<"One Time" | "Monthly">("One Time");
   const [details, setDetails] = useState({ name: "", email: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [checkoutToken, setCheckoutToken] = useState("");
+  const [checkoutResetKey, setCheckoutResetKey] = useState(0);
+  const [checkoutState, setCheckoutState] = useState<
+    { status: "idle" | "starting" } | { status: "error"; message: string }
+  >({ status: "idle" });
+  const [paymentReturn, setPaymentReturn] = useState<{
+    status: "success" | "cancelled";
+    reference?: string;
+  } | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get("payment");
+    return payment === "success" || payment === "cancelled"
+      ? { status: payment, reference: params.get("reference") || undefined }
+      : null;
+  });
+  const donationSubmissionId = useRef(crypto.randomUUID());
   const effectiveAmount = amount === "custom" ? Number(customAmount) : amount;
   const maximumPreparedDonation = 10_000_000;
   const validAmount =
@@ -4160,6 +4975,10 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [step]);
+
+  useEffect(() => {
+    if (paymentReturn?.status === "success") setStep(5);
+  }, [paymentReturn]);
 
   const showStepError = (message: string) => {
     setErrors({ selection: message });
@@ -4200,6 +5019,44 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
     setFrequency("One Time");
     setDetails({ name: "", email: "", phone: "" });
     setErrors({});
+    setCheckoutToken("");
+    setCheckoutResetKey((current) => current + 1);
+    setCheckoutState({ status: "idle" });
+    setPaymentReturn(null);
+    donationSubmissionId.current = crypto.randomUUID();
+    window.history.replaceState({}, "", "/donate");
+  };
+
+  const startSecureCheckout = async () => {
+    if (!validAmount || !cause || !details.name || !details.email) return;
+    if (!checkoutToken) {
+      setCheckoutState({
+        status: "error",
+        message: "Complete human verification before checkout.",
+      });
+      return;
+    }
+    setCheckoutState({ status: "starting" });
+    try {
+      const result = await createDonationCheckout({
+        submissionId: donationSubmissionId.current,
+        amount: Number(effectiveAmount),
+        frequency,
+        cause,
+        name: details.name,
+        email: details.email,
+        phone: details.phone || undefined,
+        turnstileToken: checkoutToken,
+      });
+      window.location.assign(result.url);
+    } catch (error) {
+      setCheckoutState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Secure checkout could not be started.",
+      });
+      setCheckoutToken("");
+      setCheckoutResetKey((current) => current + 1);
+    }
   };
 
   const amountDisplay = new Intl.NumberFormat("en-IN").format(validAmount ? effectiveAmount : 0);
@@ -4220,6 +5077,18 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
         image="/images/family-medical-support.jpg"
         imageAlt="A Noel Foundation representative meeting a child and caregiver during a hospital visit"
       />
+      {paymentReturn?.status === "cancelled" ? (
+        <div className="container-shell payment-return-banner" role="status">
+          <Icon name="shield" />
+          <p>
+            <strong>No payment was recorded.</strong> Stripe checkout was cancelled. You can prepare
+            a new contribution whenever you are ready.
+          </p>
+          <button type="button" className="button button--secondary" onClick={resetDonation}>
+            Start again
+          </button>
+        </div>
+      ) : null}
       <section className="section section--cream">
         <div className="container-shell donate-layout">
           <div className="donation-panel">
@@ -4490,7 +5359,31 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                     contribution is counted only after provider confirmation.
                   </p>
                 </div>
-                {DONATION_URL ? (
+                {checkoutBackendConfigured ? (
+                  <div className="donation-checkout">
+                    <HumanVerification
+                      action="donate"
+                      onToken={setCheckoutToken}
+                      resetKey={checkoutResetKey}
+                    />
+                    {checkoutState.status === "error" ? (
+                      <p className="form-status form-status--error" role="alert">
+                        {checkoutState.message}
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="button button--primary button--large button--wide"
+                      disabled={checkoutState.status === "starting"}
+                      onClick={startSecureCheckout}
+                    >
+                      {checkoutState.status === "starting"
+                        ? "Opening secure checkout…"
+                        : "Donate securely with Stripe"}{" "}
+                      <Icon name="external" />
+                    </button>
+                  </div>
+                ) : DONATION_URL ? (
                   <a
                     href={DONATION_URL}
                     className="button button--primary button--large button--wide"
@@ -4533,23 +5426,31 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   Your preparation is complete.
                 </h2>
                 <p>
-                  This is not a payment confirmation. Your contribution is complete only when the
-                  approved payment provider issues confirmation.
+                  {paymentReturn?.status === "success"
+                    ? "Stripe has returned you to Noel Foundation. A receipt or final confirmation is issued only after the signed payment event is reconciled."
+                    : "This is not a payment confirmation. Your contribution is complete only when the approved payment provider issues confirmation."}
                 </p>
-                <div className="donation-review donation-review--complete">
-                  <div>
-                    <small>Amount</small>
-                    <strong>₹{amountDisplay}</strong>
+                {paymentReturn?.reference ? (
+                  <p className="donation-reference">
+                    Reference: <strong>{paymentReturn.reference}</strong>
+                  </p>
+                ) : null}
+                {!paymentReturn ? (
+                  <div className="donation-review donation-review--complete">
+                    <div>
+                      <small>Amount</small>
+                      <strong>₹{amountDisplay}</strong>
+                    </div>
+                    <div>
+                      <small>Cause</small>
+                      <strong>{cause}</strong>
+                    </div>
+                    <div>
+                      <small>Frequency</small>
+                      <strong>{frequency}</strong>
+                    </div>
                   </div>
-                  <div>
-                    <small>Cause</small>
-                    <strong>{cause}</strong>
-                  </div>
-                  <div>
-                    <small>Frequency</small>
-                    <strong>{frequency}</strong>
-                  </div>
-                </div>
+                ) : null}
                 <div className="button-row">
                   <button
                     type="button"
@@ -4591,9 +5492,11 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                 <button type="button" className="button button--ghost" onClick={() => setStep(3)}>
                   <Icon name="chevron-left" /> Back
                 </button>
-                <button type="button" className="button button--dark" onClick={() => setStep(5)}>
-                  Finish preparation <Icon name="check" />
-                </button>
+                {!checkoutBackendConfigured ? (
+                  <button type="button" className="button button--dark" onClick={() => setStep(5)}>
+                    Finish preparation <Icon name="check" />
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -5119,28 +6022,44 @@ function Footer({ navigate }: { navigate: Navigate }) {
   );
 }
 
-function LoadingScreen({ visible }: { visible: boolean }) {
+function LoadingScreen({ visible, onSkip }: { visible: boolean; onSkip: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [soundOn, setSoundOn] = useState(false);
   if (!visible) return null;
   return (
     <div className="loading-screen" role="status" aria-label="Loading Noel Foundation">
       <video
+        ref={videoRef}
         className="loading-screen__video"
         autoPlay
-        muted
+        muted={!soundOn}
         playsInline
         preload="auto"
         poster="/images/community-relief.jpg"
+        onEnded={onSkip}
         aria-hidden="true"
       >
         <source src="/media/noel-foundation-intro.mp4" type="video/mp4" />
       </video>
-      <div className="loading-screen__veil" aria-hidden="true" />
-      <div className="loading-screen__brand">
-        <Logo inverse />
-        <p>Human first. Impact driven.</p>
-      </div>
-      <div className="loading-screen__track" aria-hidden="true">
-        <span />
+      <div className="loading-screen__controls">
+        <button
+          type="button"
+          onClick={() => {
+            const next = !soundOn;
+            setSoundOn(next);
+            if (videoRef.current) {
+              videoRef.current.muted = !next;
+              if (next) void videoRef.current.play().catch(() => setSoundOn(false));
+            }
+          }}
+          aria-pressed={soundOn}
+        >
+          <Icon name={soundOn ? "pause" : "play"} />{" "}
+          {soundOn ? "Original sound on" : "Play original sound"}
+        </button>
+        <button type="button" onClick={onSkip}>
+          Skip intro
+        </button>
       </div>
     </div>
   );
@@ -5185,7 +6104,7 @@ export default function App() {
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => setBooting(false), reducedMotion ? 120 : 1700);
+    const timer = window.setTimeout(() => setBooting(false), reducedMotion ? 120 : 5400);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -5245,7 +6164,7 @@ export default function App() {
 
   return (
     <div className="app-shell" aria-busy={booting}>
-      <LoadingScreen visible={booting} />
+      <LoadingScreen visible={booting} onSkip={() => setBooting(false)} />
       <div className="app-content" inert={booting} aria-hidden={booting ? true : undefined}>
         <div
           className={routeBusy ? "route-progress route-progress--active" : "route-progress"}

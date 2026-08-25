@@ -1,6 +1,6 @@
 import { contact } from "../content";
 
-export type PublicFormKind = "contact" | "volunteer" | "csr";
+export type PublicFormKind = "contact" | "volunteer" | "csr" | "feedback";
 
 export type ImpactMetric = {
   key: string;
@@ -31,6 +31,8 @@ export type PublicFormPayload = {
   communicationPreference?: string;
   partnershipModel?: string;
   outcomeGoal?: string;
+  rating?: number;
+  pageContext?: string;
   consent: boolean;
   website?: string;
   startedAt: number;
@@ -47,6 +49,22 @@ export type PublicFormResult =
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 export const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+
+export type DonationCheckoutPayload = {
+  submissionId: string;
+  amount: number;
+  frequency: "One Time" | "Monthly";
+  cause: string;
+  name: string;
+  email: string;
+  phone?: string;
+  turnstileToken: string;
+};
+
+export type DonationCheckoutResult = {
+  url: string;
+  reference: string;
+};
 
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 12_000) {
   const controller = new AbortController();
@@ -65,7 +83,9 @@ function fallbackMailto(payload: PublicFormPayload) {
       ? `Volunteer enquiry - ${payload.cause || "Noel Foundation"}`
       : payload.kind === "csr"
         ? `CSR partnership enquiry - ${payload.organisation || payload.name}`
-        : payload.subject || "Website enquiry",
+        : payload.kind === "feedback"
+          ? "Noel Foundation website feedback"
+          : payload.subject || "Website enquiry",
   );
 
   const lines = [
@@ -84,11 +104,49 @@ function fallbackMailto(payload: PublicFormPayload) {
     payload.communicationPreference
       ? `Communication preference: ${payload.communicationPreference}`
       : "",
+    payload.rating ? `Experience rating: ${payload.rating}/5` : "",
+    payload.pageContext ? `Page: ${payload.pageContext}` : "",
     "",
     payload.message || "",
   ].filter(Boolean);
 
   return `mailto:${contact.email}?subject=${subject}&body=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+export async function createDonationCheckout(
+  payload: DonationCheckoutPayload,
+): Promise<DonationCheckoutResult> {
+  if (!supabaseUrl || !publishableKey || !turnstileSiteKey) {
+    throw new Error("Secure online checkout is not configured yet.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      `${supabaseUrl}/functions/v1/create-checkout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: publishableKey,
+        },
+        body: JSON.stringify(payload),
+      },
+      15_000,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Secure checkout timed out. Please try again.");
+    }
+    throw error;
+  }
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(error?.error || "Secure checkout could not be started.");
+  }
+
+  return (await response.json()) as DonationCheckoutResult;
 }
 
 export async function submitPublicForm(payload: PublicFormPayload): Promise<PublicFormResult> {
@@ -169,3 +227,4 @@ export function fetchPublicImpactMetrics(): Promise<ImpactMetric[]> {
 
 export const impactBackendConfigured = Boolean(supabaseUrl && publishableKey);
 export const backendConfigured = Boolean(impactBackendConfigured && turnstileSiteKey);
+export const checkoutBackendConfigured = backendConfigured;
