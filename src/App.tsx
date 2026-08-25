@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { ConsentField, SelectField, TextAreaField, TextField } from "./components/FormControls";
 import HumanVerification from "./components/HumanVerification";
 import Icon, { type IconName } from "./components/Icon";
@@ -267,6 +268,46 @@ function InternalLink({
       {children}
     </a>
   );
+}
+
+function handleRadioGroupKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+  const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+  if (!keys.includes(event.key)) return;
+  const radios = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]:not([aria-disabled="true"])'),
+  );
+  if (radios.length === 0) return;
+  const current =
+    event.target instanceof HTMLElement
+      ? event.target.closest<HTMLElement>('[role="radio"]')
+      : null;
+  const currentIndex = current ? radios.indexOf(current) : -1;
+  let nextIndex = currentIndex;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = radios.length - 1;
+  if (event.key === "ArrowLeft" || event.key === "ArrowUp")
+    nextIndex = (Math.max(currentIndex, 0) - 1 + radios.length) % radios.length;
+  if (event.key === "ArrowRight" || event.key === "ArrowDown")
+    nextIndex = (Math.max(currentIndex, -1) + 1) % radios.length;
+  event.preventDefault();
+  radios[nextIndex]?.focus();
+  radios[nextIndex]?.click();
+}
+
+function readStoredPreference(key: string) {
+  try {
+    return window.localStorage.getItem(key) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function storePreference(key: string, enabled: boolean) {
+  try {
+    window.localStorage.setItem(key, enabled ? "on" : "off");
+  } catch {
+    // Preferences remain available for this session when browser storage is blocked.
+  }
 }
 
 function SectionHeading({
@@ -560,96 +601,104 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
         </div>
       </div>
 
-      {menuOpen ? (
-        <div className="mobile-menu" role="dialog" aria-modal="true" aria-label="Navigation menu">
-          <button
-            type="button"
-            className="mobile-menu__backdrop"
-            aria-label="Close navigation menu"
-            onClick={() => closeMenu()}
-          />
-          <div ref={menuPanelRef} className="mobile-menu__panel" id="mobile-navigation">
-            <div className="mobile-menu__head">
-              <Logo />
+      {menuOpen
+        ? createPortal(
+            <div
+              className="mobile-menu"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
+            >
               <button
-                ref={closeButtonRef}
                 type="button"
-                className="icon-button"
+                className="mobile-menu__backdrop"
                 aria-label="Close navigation menu"
                 onClick={() => closeMenu()}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-            <nav aria-label="Mobile navigation">
-              <InternalLink
-                href="/"
-                navigate={navigate}
-                aria-current={path === "/" ? "page" : undefined}
-                onNavigate={() => closeMenu(false)}
-              >
-                Home
-              </InternalLink>
-              <p className="mobile-menu__label">About</p>
-              {aboutLinks.map((item) => (
+              />
+              <div ref={menuPanelRef} className="mobile-menu__panel" id="mobile-navigation">
+                <div className="mobile-menu__head">
+                  <Logo />
+                  <button
+                    ref={closeButtonRef}
+                    type="button"
+                    className="icon-button"
+                    aria-label="Close navigation menu"
+                    onClick={() => closeMenu()}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </div>
+                <nav aria-label="Mobile navigation">
+                  <InternalLink
+                    href="/"
+                    navigate={navigate}
+                    aria-current={path === "/" ? "page" : undefined}
+                    onNavigate={() => closeMenu(false)}
+                  >
+                    Home
+                  </InternalLink>
+                  <p className="mobile-menu__label">About</p>
+                  {aboutLinks.map((item) => (
+                    <InternalLink
+                      key={item.href}
+                      href={item.href}
+                      navigate={navigate}
+                      aria-current={path === item.href ? "page" : undefined}
+                      onNavigate={() => closeMenu(false)}
+                    >
+                      {item.label}
+                    </InternalLink>
+                  ))}
+                  <p className="mobile-menu__label">Programs</p>
+                  {programLinks.map((item) => (
+                    <InternalLink
+                      key={item.href}
+                      href={item.href}
+                      navigate={navigate}
+                      aria-current={path === item.href ? "page" : undefined}
+                      onNavigate={() => closeMenu(false)}
+                    >
+                      {item.label}
+                    </InternalLink>
+                  ))}
+                  <p className="mobile-menu__label">Explore</p>
+                  {[
+                    { label: "Impact", href: "/impact" },
+                    { label: "Stories", href: "/stories" },
+                    { label: "CSR partnerships", href: "/csr" },
+                    { label: "Volunteer", href: "/volunteer" },
+                    { label: "Reports", href: "/reports" },
+                    { label: "Contact", href: "/contact" },
+                  ].map((item) => (
+                    <InternalLink
+                      key={item.href}
+                      href={item.href}
+                      navigate={navigate}
+                      aria-current={path === item.href ? "page" : undefined}
+                      onNavigate={() => closeMenu(false)}
+                    >
+                      {item.label}
+                    </InternalLink>
+                  ))}
+                </nav>
                 <InternalLink
-                  key={item.href}
-                  href={item.href}
+                  href="/donate"
                   navigate={navigate}
-                  aria-current={path === item.href ? "page" : undefined}
+                  className="button button--primary button--wide"
+                  aria-current={path === "/donate" ? "page" : undefined}
                   onNavigate={() => closeMenu(false)}
                 >
-                  {item.label}
+                  Donate now <Icon name="heart" />
                 </InternalLink>
-              ))}
-              <p className="mobile-menu__label">Programs</p>
-              {programLinks.map((item) => (
-                <InternalLink
-                  key={item.href}
-                  href={item.href}
-                  navigate={navigate}
-                  aria-current={path === item.href ? "page" : undefined}
-                  onNavigate={() => closeMenu(false)}
-                >
-                  {item.label}
-                </InternalLink>
-              ))}
-              <p className="mobile-menu__label">Explore</p>
-              {[
-                { label: "Impact", href: "/impact" },
-                { label: "Stories", href: "/stories" },
-                { label: "CSR partnerships", href: "/csr" },
-                { label: "Volunteer", href: "/volunteer" },
-                { label: "Reports", href: "/reports" },
-                { label: "Contact", href: "/contact" },
-              ].map((item) => (
-                <InternalLink
-                  key={item.href}
-                  href={item.href}
-                  navigate={navigate}
-                  aria-current={path === item.href ? "page" : undefined}
-                  onNavigate={() => closeMenu(false)}
-                >
-                  {item.label}
-                </InternalLink>
-              ))}
-            </nav>
-            <InternalLink
-              href="/donate"
-              navigate={navigate}
-              className="button button--primary button--wide"
-              aria-current={path === "/donate" ? "page" : undefined}
-              onNavigate={() => closeMenu(false)}
-            >
-              Donate now <Icon name="heart" />
-            </InternalLink>
-            <div className="mobile-menu__contact">
-              <a href={`tel:${contact.phoneHref}`}>{contact.phoneDisplay}</a>
-              <a href={`mailto:${contact.email}`}>{contact.email}</a>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <div className="mobile-menu__contact">
+                  <a href={`tel:${contact.phoneHref}`}>{contact.phoneDisplay}</a>
+                  <a href={`mailto:${contact.email}`}>{contact.email}</a>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }
@@ -944,12 +993,16 @@ function MetricValue({ metric }: { metric: ImpactMetric }) {
 function ImpactMetrics({ compact = false }: { compact?: boolean }) {
   const [metrics, setMetrics] = useState<ImpactMetric[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
     fetchPublicImpactMetrics()
       .then((records) => {
         if (active) setMetrics(records);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -994,7 +1047,11 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
               <h3>{metric.label}</h3>
               <p>{metric.programme}</p>
               <small>
-                {loading ? "Checking verified records..." : "Awaiting verified publication"}
+                {loading
+                  ? "Checking verified records..."
+                  : loadError
+                    ? "Evidence layer temporarily unavailable"
+                    : "Awaiting verified publication"}
               </small>
             </article>
           ))}
@@ -1004,9 +1061,14 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
 
 const reportingAreas = ["Children's Health", "Education", "Women's Livelihoods", "Community"];
 
+function metricReportingArea(metric: ImpactMetric) {
+  return metric.programme?.trim() || "Foundation-wide";
+}
+
 function ImpactAnalyticsStudio() {
   const [metrics, setMetrics] = useState<ImpactMetric[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [programFilter, setProgramFilter] = useState("All programs");
   const [view, setView] = useState<"coverage" | "records">("coverage");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1018,6 +1080,9 @@ function ImpactAnalyticsStudio() {
       .then((records) => {
         if (active) setMetrics(records);
       })
+      .catch(() => {
+        if (active) setLoadError(true);
+      })
       .finally(() => {
         if (active) setLoading(false);
       });
@@ -1026,26 +1091,33 @@ function ImpactAnalyticsStudio() {
     };
   }, []);
 
+  const availableReportingAreas = useMemo(
+    () =>
+      Array.from(
+        new Set([...reportingAreas, ...metrics.map((metric) => metricReportingArea(metric))]),
+      ),
+    [metrics],
+  );
+
   const visibleMetrics = useMemo(
     () =>
       deferredFilter === "All programs"
         ? metrics
-        : metrics.filter((metric) => metric.programme === deferredFilter),
+        : metrics.filter((metric) => metricReportingArea(metric) === deferredFilter),
     [deferredFilter, metrics],
   );
 
-  const coverage = useMemo(
-    () =>
-      reportingAreas.map((area) => ({
-        area,
-        count: metrics.filter((metric) => metric.programme === area).length,
-      })),
-    [metrics],
-  );
+  const coverage = useMemo(() => {
+    const areas = deferredFilter === "All programs" ? availableReportingAreas : [deferredFilter];
+    return areas.map((area) => ({
+      area,
+      count: metrics.filter((metric) => metricReportingArea(metric) === area).length,
+    }));
+  }, [availableReportingAreas, deferredFilter, metrics]);
   const maximumCount = Math.max(1, ...coverage.map((item) => item.count));
   const coveredAreas = coverage.filter((item) => item.count > 0).length;
-  const sourcedRecords = metrics.filter((metric) => Boolean(metric.source)).length;
-  const latestRecord = [...metrics].sort(
+  const sourcedRecords = visibleMetrics.filter((metric) => Boolean(metric.source)).length;
+  const latestRecord = [...visibleMetrics].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   )[0];
 
@@ -1067,13 +1139,21 @@ function ImpactAnalyticsStudio() {
               <Icon name="analytics" />
             </span>
             <p>
-              <strong>{metrics.length} verified public records</strong>
+              <strong>
+                {loadError
+                  ? "Verified public records temporarily unavailable"
+                  : `${visibleMetrics.length} verified public ${
+                      visibleMetrics.length === 1 ? "record" : "records"
+                    }${programFilter === "All programs" ? "" : ` in ${programFilter}`}`}
+              </strong>
               <small>
                 {latestRecord
                   ? `Latest record updated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(latestRecord.updated_at))}`
                   : loading
                     ? "Checking the approved evidence layer"
-                    : "Ready for approved publication"}
+                    : loadError
+                      ? "The approved evidence layer is temporarily unavailable"
+                      : "Ready for approved publication"}
               </small>
             </p>
           </div>
@@ -1118,7 +1198,7 @@ function ImpactAnalyticsStudio() {
                 <p>Choose one public reporting area. Verification status is never optional.</p>
               </div>
               <div className="filter-chip-row" role="group" aria-label="Filter by program">
-                {["All programs", ...reportingAreas].map((item) => (
+                {["All programs", ...availableReportingAreas].map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -1150,14 +1230,22 @@ function ImpactAnalyticsStudio() {
                   className="coverage-ring"
                   style={
                     {
-                      "--coverage": `${(coveredAreas / reportingAreas.length) * 360}deg`,
+                      "--coverage": `${(coveredAreas / coverage.length) * 360}deg`,
                     } as React.CSSProperties
                   }
-                  aria-label={`${coveredAreas} of ${reportingAreas.length} reporting areas currently have verified public records`}
+                  aria-label={
+                    loadError
+                      ? "Publication coverage unavailable while the evidence service cannot be reached"
+                      : `${coveredAreas} of ${coverage.length} reporting areas currently have verified public records`
+                  }
                 >
                   <span>
-                    <strong>{coveredAreas}</strong>
-                    <small>of {reportingAreas.length} areas</small>
+                    <strong>{loadError ? "—" : coveredAreas}</strong>
+                    <small>
+                      {loadError
+                        ? "coverage unavailable"
+                        : `of ${coverage.length} ${coverage.length === 1 ? "area" : "areas"}`}
+                    </small>
                   </span>
                 </div>
                 <div>
@@ -1176,30 +1264,38 @@ function ImpactAnalyticsStudio() {
                     <h3>Published metric records by program</h3>
                   </div>
                   <span>
-                    {sourcedRecords}/{metrics.length || 0} source-labelled
+                    {loadError
+                      ? "Source coverage unavailable"
+                      : visibleMetrics.length > 0
+                        ? `${sourcedRecords}/${visibleMetrics.length} source-labelled`
+                        : "No public records in view"}
                   </span>
                 </header>
-                <div
-                  className="coverage-bars"
-                  role="list"
-                  aria-label="Published record counts by program"
-                >
-                  {coverage.map((item) => (
-                    <div className="coverage-bar" key={item.area} role="listitem">
-                      <div>
-                        <span>{item.area}</span>
-                        <strong>{item.count}</strong>
+                {!loadError ? (
+                  <div
+                    className="coverage-bars"
+                    role="list"
+                    aria-label="Published record counts by program"
+                  >
+                    {coverage.map((item) => (
+                      <div className="coverage-bar" key={item.area} role="listitem">
+                        <div>
+                          <span>{item.area}</span>
+                          <strong>{item.count}</strong>
+                        </div>
+                        <span className="coverage-bar__track" aria-hidden="true">
+                          <span style={{ width: `${(item.count / maximumCount) * 100}%` }} />
+                        </span>
                       </div>
-                      <span className="coverage-bar__track" aria-hidden="true">
-                        <span style={{ width: `${(item.count / maximumCount) * 100}%` }} />
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                {!loading && metrics.length === 0 ? (
+                    ))}
+                  </div>
+                ) : null}
+                {!loading && visibleMetrics.length === 0 ? (
                   <p className="chart-empty">
-                    <Icon name="shield" /> No approved records are public yet. The visualization
-                    will populate automatically after verification.
+                    <Icon name="shield" />
+                    {loadError
+                      ? "The evidence layer could not be reached. This does not indicate an absence of records."
+                      : "No approved records are public in this view yet. The visualization will populate automatically after verification."}
                   </p>
                 ) : null}
               </article>
@@ -1211,7 +1307,7 @@ function ImpactAnalyticsStudio() {
                   <p className="eyebrow">Verified records</p>
                   <h3>{programFilter}</h3>
                 </div>
-                <span>{visibleMetrics.length} records</span>
+                <span>{loadError ? "Unavailable" : `${visibleMetrics.length} records`}</span>
               </div>
               {visibleMetrics.length > 0 ? (
                 <div className="impact-record-list">
@@ -1241,12 +1337,18 @@ function ImpactAnalyticsStudio() {
                   </span>
                   <div>
                     <h4>
-                      {loading ? "Loading verified records" : "No verified records in this view"}
+                      {loading
+                        ? "Loading verified records"
+                        : loadError
+                          ? "Evidence layer temporarily unavailable"
+                          : "No verified records in this view"}
                     </h4>
                     <p>
                       {loading
                         ? "The approved public evidence layer is being checked."
-                        : "Try another program filter or return after approved records are published."}
+                        : loadError
+                          ? "We could not reach the evidence service. Please try again later."
+                          : "Try another program filter or return after approved records are published."}
                     </p>
                   </div>
                 </div>
@@ -2741,11 +2843,12 @@ function CSRBuilder() {
             className="choice-grid choice-grid--three"
             role="radiogroup"
             tabIndex={-1}
+            onKeyDown={handleRadioGroupKeyDown}
             aria-invalid={Boolean(errors.selection)}
             aria-labelledby="csr-step-heading"
             aria-describedby={errors.selection ? "csr-selection-error" : undefined}
           >
-            {programs.map((item) => (
+            {programs.map((item, index) => (
               <button
                 key={item.slug}
                 type="button"
@@ -2754,6 +2857,7 @@ function CSRBuilder() {
                 }
                 role="radio"
                 aria-checked={program === item.shortTitle}
+                tabIndex={program ? (program === item.shortTitle ? 0 : -1) : index === 0 ? 0 : -1}
                 onClick={() => setProgram(item.shortTitle)}
               >
                 <span>
@@ -2785,11 +2889,12 @@ function CSRBuilder() {
             className="choice-grid"
             role="radiogroup"
             tabIndex={-1}
+            onKeyDown={handleRadioGroupKeyDown}
             aria-invalid={Boolean(errors.selection)}
             aria-labelledby="csr-step-heading"
             aria-describedby={errors.selection ? "csr-selection-error" : undefined}
           >
-            {partnershipModels.map((item) => (
+            {partnershipModels.map((item, index) => (
               <button
                 key={item.title}
                 type="button"
@@ -2798,6 +2903,7 @@ function CSRBuilder() {
                 }
                 role="radio"
                 aria-checked={model === item.title}
+                tabIndex={model ? (model === item.title ? 0 : -1) : index === 0 ? 0 : -1}
                 onClick={() => setModel(item.title)}
               >
                 <strong>{item.title}</strong>
@@ -3221,11 +3327,12 @@ function VolunteerPage({ navigate }: { navigate: Navigate }) {
                 className="cause-grid"
                 role="radiogroup"
                 tabIndex={-1}
+                onKeyDown={handleRadioGroupKeyDown}
                 aria-invalid={Boolean(errors.cause)}
                 aria-labelledby="volunteer-cause-label"
                 aria-describedby={errors.cause ? "volunteer-cause-error" : undefined}
               >
-                {causes.map((cause) => (
+                {causes.map((cause, index) => (
                   <button
                     key={cause}
                     type="button"
@@ -3234,6 +3341,7 @@ function VolunteerPage({ navigate }: { navigate: Navigate }) {
                     }
                     role="radio"
                     aria-checked={form.cause === cause}
+                    tabIndex={form.cause ? (form.cause === cause ? 0 : -1) : index === 0 ? 0 : -1}
                     onClick={() => setForm({ ...form, cause })}
                   >
                     <Icon
@@ -3419,6 +3527,13 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
   const [details, setDetails] = useState({ name: "", email: "", phone: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const effectiveAmount = amount === "custom" ? Number(customAmount) : amount;
+  const maximumPreparedDonation = 10_000_000;
+  const validAmount =
+    typeof effectiveAmount === "number" &&
+    Number.isFinite(effectiveAmount) &&
+    Number.isInteger(effectiveAmount) &&
+    effectiveAmount >= 100 &&
+    effectiveAmount <= maximumPreparedDonation;
   const causes = ["Where Needed Most", "Children's Health", "Education", "Women's Livelihoods"];
   const amountOptions = [
     { value: 1000, label: "Critical support" },
@@ -3445,8 +3560,10 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
   };
 
   const next = () => {
-    if (step === 1 && (!effectiveAmount || effectiveAmount < 100))
-      return showStepError("Choose or enter a contribution of at least ₹100.");
+    if (step === 1 && !validAmount)
+      return showStepError(
+        "Choose an amount from ₹100 to ₹1,00,00,000. Contact us for larger contributions.",
+      );
     if (step === 2 && !cause)
       return showStepError("Choose where you would like your contribution directed.");
     if (step === 3) {
@@ -3476,7 +3593,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
     setErrors({});
   };
 
-  const amountDisplay = new Intl.NumberFormat("en-IN").format(effectiveAmount || 0);
+  const amountDisplay = new Intl.NumberFormat("en-IN").format(validAmount ? effectiveAmount : 0);
   const assistanceBody = encodeURIComponent(
     `Hello Noel Foundation,\n\nI have prepared a ${frequency.toLowerCase()} contribution of ₹${amountDisplay} toward ${cause}.\n\nName: ${details.name}\nEmail: ${details.email}${details.phone ? `\nPhone: ${details.phone}` : ""}\n\nPlease share the approved donation process.\n\nThank you.`,
   );
@@ -3534,11 +3651,12 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   className="amount-grid"
                   role="radiogroup"
                   tabIndex={-1}
+                  onKeyDown={handleRadioGroupKeyDown}
                   aria-invalid={Boolean(errors.selection)}
                   aria-labelledby="donation-step-heading"
                   aria-describedby={errors.selection ? "donation-step-error" : undefined}
                 >
-                  {amountOptions.map((option) => (
+                  {amountOptions.map((option, index) => (
                     <button
                       key={option.value}
                       type="button"
@@ -3549,6 +3667,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                       }
                       role="radio"
                       aria-checked={amount === option.value}
+                      tabIndex={amount ? (amount === option.value ? 0 : -1) : index === 0 ? 0 : -1}
                       onClick={() => {
                         setAmount(option.value);
                         setErrors({});
@@ -3568,6 +3687,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                     }
                     role="radio"
                     aria-checked={amount === "custom"}
+                    tabIndex={amount === "custom" ? 0 : -1}
                     onClick={() => {
                       setAmount("custom");
                       setErrors({});
@@ -3586,20 +3706,30 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                     name="custom-amount"
                     type="number"
                     min="100"
+                    max="10000000"
+                    step="1"
                     inputMode="numeric"
                     value={customAmount}
-                    onChange={(event) => setCustomAmount(event.target.value)}
+                    onChange={(event) => {
+                      setCustomAmount(event.target.value);
+                      setErrors({});
+                    }}
                   />
                 ) : null}
                 <div className="frequency-selector">
                   <p className="field__label">Frequency</p>
-                  <div role="radiogroup" aria-label="Contribution frequency">
+                  <div
+                    role="radiogroup"
+                    aria-label="Contribution frequency"
+                    onKeyDown={handleRadioGroupKeyDown}
+                  >
                     {(["One Time", "Monthly"] as const).map((item) => (
                       <button
                         key={item}
                         type="button"
                         role="radio"
                         aria-checked={frequency === item}
+                        tabIndex={frequency === item ? 0 : -1}
                         className={frequency === item ? "is-active" : ""}
                         onClick={() => setFrequency(item)}
                       >
@@ -3626,11 +3756,12 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   className="donation-cause-grid"
                   role="radiogroup"
                   tabIndex={-1}
+                  onKeyDown={handleRadioGroupKeyDown}
                   aria-invalid={Boolean(errors.selection)}
                   aria-labelledby="donation-step-heading"
                   aria-describedby={errors.selection ? "donation-step-error" : undefined}
                 >
-                  {causes.map((item) => (
+                  {causes.map((item, index) => (
                     <button
                       key={item}
                       type="button"
@@ -3641,6 +3772,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                       }
                       role="radio"
                       aria-checked={cause === item}
+                      tabIndex={cause ? (cause === item ? 0 : -1) : index === 0 ? 0 : -1}
                       onClick={() => {
                         setCause(item);
                         setErrors({});
@@ -4420,12 +4552,16 @@ function ExperienceDock({
 
   useEffect(() => setOpen(false), [path]);
 
+  const closePanel = () => {
+    setOpen(false);
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
+  };
+
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
+      closePanel();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -4445,6 +4581,7 @@ function ExperienceDock({
               navigate={navigate}
               className={isCurrent(item.href) ? "dock-link dock-link--active" : "dock-link"}
               aria-current={isCurrent(item.href) ? "page" : undefined}
+              aria-label={item.label}
               data-label={item.label}
             >
               <Icon name={item.icon} />
@@ -4484,7 +4621,7 @@ function ExperienceDock({
               type="button"
               className="icon-button"
               aria-label="Close experience settings"
-              onClick={() => setOpen(false)}
+              onClick={closePanel}
             >
               <Icon name="close" />
             </button>
@@ -4500,8 +4637,10 @@ function ExperienceDock({
                 <Icon name={motionEnabled ? "spark" : "pause"} />
               </span>
               <span>
-                <strong>Motion</strong>
-                <small>{motionEnabled ? "Scroll reveals enabled" : "Animations paused"}</small>
+                <strong>Scroll reveals</strong>
+                <small>
+                  {motionEnabled ? "Enabled while browsing" : "Paused for this browser"}
+                </small>
               </span>
               <i aria-hidden="true">
                 <span />
@@ -4602,11 +4741,9 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
-    return window.localStorage.getItem("noel-motion") !== "off";
+    return readStoredPreference("noel-motion");
   });
-  const [glassEnabled, setGlassEnabled] = useState(
-    () => window.localStorage.getItem("noel-glass") !== "off",
-  );
+  const [glassEnabled, setGlassEnabled] = useState(() => readStoredPreference("noel-glass"));
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -4616,12 +4753,12 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.motion = motionEnabled ? "on" : "off";
-    window.localStorage.setItem("noel-motion", motionEnabled ? "on" : "off");
+    storePreference("noel-motion", motionEnabled);
   }, [motionEnabled]);
 
   useEffect(() => {
     document.documentElement.dataset.glass = glassEnabled ? "on" : "off";
-    window.localStorage.setItem("noel-glass", glassEnabled ? "on" : "off");
+    storePreference("noel-glass", glassEnabled);
   }, [glassEnabled]);
 
   useEffect(() => {
@@ -4644,7 +4781,9 @@ export default function App() {
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            entry.target.classList.toggle("is-revealed", entry.isIntersecting);
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("is-revealed");
+            observer.unobserve(entry.target);
           });
         },
         { threshold: 0.08, rootMargin: "4% 0px -8% 0px" },
@@ -4671,35 +4810,37 @@ export default function App() {
   }, [path]);
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" aria-busy={booting}>
       <LoadingScreen visible={booting} />
-      <div
-        className={routeBusy ? "route-progress route-progress--active" : "route-progress"}
-        role="progressbar"
-        aria-label="Loading page"
-        aria-hidden={!routeBusy}
-      >
-        <span />
+      <div className="app-content" inert={booting} aria-hidden={booting ? true : undefined}>
+        <div
+          className={routeBusy ? "route-progress route-progress--active" : "route-progress"}
+          role="progressbar"
+          aria-label="Loading page"
+          aria-hidden={!routeBusy}
+        >
+          <span />
+        </div>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {pageTitles[path] || "Page not found | Noel Foundation"}
+        </div>
+        <Header path={path} navigate={navigate} />
+        <main id="main-content" tabIndex={-1}>
+          <AppRoutes path={path} navigate={navigate} />
+        </main>
+        <Footer navigate={navigate} />
+        <ExperienceDock
+          path={path}
+          navigate={navigate}
+          motionEnabled={motionEnabled}
+          onToggleMotion={() => setMotionEnabled((current) => !current)}
+          glassEnabled={glassEnabled}
+          onToggleGlass={() => setGlassEnabled((current) => !current)}
+        />
       </div>
-      <a href="#main-content" className="skip-link">
-        Skip to main content
-      </a>
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {pageTitles[path] || "Page not found | Noel Foundation"}
-      </div>
-      <Header path={path} navigate={navigate} />
-      <main id="main-content" tabIndex={-1}>
-        <AppRoutes path={path} navigate={navigate} />
-      </main>
-      <Footer navigate={navigate} />
-      <ExperienceDock
-        path={path}
-        navigate={navigate}
-        motionEnabled={motionEnabled}
-        onToggleMotion={() => setMotionEnabled((current) => !current)}
-        glassEnabled={glassEnabled}
-        onToggleGlass={() => setGlassEnabled((current) => !current)}
-      />
     </div>
   );
 }

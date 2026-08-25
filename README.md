@@ -5,6 +5,10 @@ A responsive, donor-facing website for Noel Foundation, built with React 19, Vit
 ## Experience highlights
 
 - Responsive layouts for phones, tablets, laptops and wide desktop screens
+- Glass navigation dock with motion and transparency preferences
+- Filterable story collections with dynamic mosaic and accessible card-stack layouts
+- Evidence-safe interactive impact studio with verified-record coverage views
+- Three-step CSR partnership builder and five-step donation preparation flow
 - Keyboard-friendly navigation, visible focus, semantic forms and reduced-motion support
 - Donor and CSR journeys that avoid unverified impact claims or fabricated urgency
 - Public enquiry, volunteer and CSR forms with Turnstile verification and a secure Supabase Edge Function hand-off
@@ -22,6 +26,8 @@ pnpm dev
 ```
 
 The default development URL is `http://localhost:8443` unless `PORT` is set.
+
+The Figma Make preview normally starts this server automatically. If `pnpm dev` reports that port 8443 is already in use, open `http://localhost:8443` rather than starting a second server, or run `pnpm dev -- --port 8444` for a separate instance.
 
 Quality checks:
 
@@ -65,6 +71,8 @@ The migration explicitly grants access and enables RLS on every public-schema ta
 ## Content and operations
 
 Program copy and public contact details live in `src/content.ts`. Public impact numbers are intentionally blank until verified records are published in `impact_metrics`. Donation reconciliation and tax/compliance statements must be approved by Noel Foundation before being shown as confirmed facts.
+
+The typography stack supports the local family names `Ways` and `Gwen`, but their commercial font files are not included. Keep the current Manrope and Newsreader web fallbacks until properly licensed vendor WOFF2 packages and web-embedding rights are supplied. Do not convert or publish desktop font files without that licence.
 
 ## Deployment
 

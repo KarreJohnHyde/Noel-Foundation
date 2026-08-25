@@ -128,8 +128,11 @@ export async function submitPublicForm(payload: PublicFormPayload): Promise<Publ
   return { delivered: true, reference: data.reference };
 }
 
-export async function fetchPublicImpactMetrics(): Promise<ImpactMetric[]> {
-  if (!supabaseUrl || !publishableKey) return [];
+let impactMetricsRequest: Promise<ImpactMetric[]> | null = null;
+
+export function fetchPublicImpactMetrics(): Promise<ImpactMetric[]> {
+  if (!supabaseUrl || !publishableKey) return Promise.resolve([]);
+  if (impactMetricsRequest) return impactMetricsRequest;
 
   const columns = [
     "key",
@@ -142,22 +145,26 @@ export async function fetchPublicImpactMetrics(): Promise<ImpactMetric[]> {
     "updated_at",
   ].join(",");
 
-  try {
-    const response = await fetchWithTimeout(
-      `${supabaseUrl}/rest/v1/impact_metrics?select=${columns}&verification_status=eq.verified&public_visibility=eq.true&order=display_order.asc`,
-      {
-        headers: {
-          apikey: publishableKey,
+  impactMetricsRequest = (async () => {
+    try {
+      const response = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/impact_metrics?select=${columns}&verification_status=eq.verified&public_visibility=eq.true&order=display_order.asc`,
+        {
+          headers: {
+            apikey: publishableKey,
+          },
         },
-      },
-      8_000,
-    );
+        8_000,
+      );
 
-    if (!response.ok) return [];
-    return (await response.json()) as ImpactMetric[];
-  } catch {
-    return [];
-  }
+      if (!response.ok) throw new Error("The public impact service is temporarily unavailable.");
+      return (await response.json()) as ImpactMetric[];
+    } finally {
+      impactMetricsRequest = null;
+    }
+  })();
+
+  return impactMetricsRequest;
 }
 
 export const backendConfigured = Boolean(supabaseUrl && publishableKey && turnstileSiteKey);

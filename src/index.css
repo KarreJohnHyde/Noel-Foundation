@@ -702,7 +702,7 @@ h2 em {
 .mobile-menu {
   inset: 0;
   position: fixed;
-  z-index: 200;
+  z-index: 500;
 }
 
 .mobile-menu__backdrop {
@@ -4506,8 +4506,8 @@ textarea.field__control {
 /* -------------------------------------------------------------------------- */
 
 :root {
-  --font-ways: "Ways", "Newsreader", Georgia, serif;
-  --font-gwen: "Gwen", "Manrope", system-ui, sans-serif;
+  --font-ways: "Ways", "Manrope", system-ui, sans-serif;
+  --font-gwen: "Gwen", "Newsreader", Georgia, serif;
   --glass-surface: rgba(255, 253, 249, 0.78);
   --glass-surface-strong: rgba(255, 253, 249, 0.92);
   --glass-border: rgba(255, 255, 255, 0.82);
@@ -4534,7 +4534,7 @@ button,
 input,
 select,
 textarea {
-  font-family: var(--font-gwen);
+  font-family: var(--font-ways);
 }
 
 h1,
@@ -4546,7 +4546,7 @@ h2,
 .collection-card h2,
 .impact-console h3,
 .experience-panel h2 {
-  font-family: var(--font-ways);
+  font-family: var(--font-gwen);
 }
 
 .glass-panel {
@@ -4567,7 +4567,8 @@ html[data-glass="on"] .site-header {
 
 html[data-glass="off"] .glass-panel,
 html[data-glass="off"] .experience-dock,
-html[data-glass="off"] .experience-panel {
+html[data-glass="off"] .experience-panel,
+html[data-glass="off"] .site-header {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background: var(--warm-white);
@@ -4586,6 +4587,7 @@ html[data-motion="on"] .reveal-target {
 html[data-motion="on"] .reveal-target.is-revealed {
   opacity: 1;
   transform: translate3d(0, 0, 0);
+  will-change: auto;
 }
 
 html[data-motion="on"] .section-heading.reveal-target h2,
@@ -5434,7 +5436,7 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
 }
 
 .coverage-ring strong {
-  font-family: var(--font-ways);
+  font-family: var(--font-gwen);
   font-size: 3rem;
   line-height: 0.9;
 }
@@ -5584,7 +5586,7 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
 }
 
 .impact-record-list > article > strong {
-  font-family: var(--font-ways);
+  font-family: var(--font-gwen);
   font-size: 1.55rem;
 }
 
@@ -5728,6 +5730,9 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
 
 .collection-search:focus-within {
   color: var(--orange-deep);
+  outline: 3px solid rgba(246, 122, 31, 0.28);
+  outline-offset: 4px;
+  border-radius: 10px;
 }
 
 .collection-console__actions,
@@ -5963,7 +5968,7 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
 .amount-card {
   align-items: center;
   display: flex;
-  font-family: var(--font-gwen);
+  font-family: var(--font-ways);
   justify-content: space-between;
   min-height: 88px;
   padding: 15px 18px;
@@ -5977,7 +5982,7 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
 }
 
 .amount-card strong {
-  font-family: var(--font-ways);
+  font-family: var(--font-gwen);
   font-size: 1.35rem;
   line-height: 1.1;
 }
