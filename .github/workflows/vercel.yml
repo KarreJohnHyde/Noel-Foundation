@@ -22,7 +22,6 @@ concurrency:
 env:
   NODE_VERSION: "22"
   PNPM_VERSION: "11.21.0"
-  VERCEL_CLI_VERSION: "59.5.0"
   SUPABASE_CLI_VERSION: "2.115.0"
 
 jobs:
@@ -51,75 +50,15 @@ jobs:
       - name: Typecheck and build
         run: pnpm check
 
-  preview:
-    name: Deploy Vercel preview
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  supabase-production:
+    name: Deploy Supabase production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_SUPABASE_DEPLOY == 'true'
     needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
-      name: preview
-      url: ${{ steps.deploy.outputs.url }}
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-
-      - name: Install Vercel CLI
-        run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
-
-      - name: Validate deployment secrets
-        shell: bash
-        run: |
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-            if [ -z "${!name}" ]; then
-              echo "::error::GitHub Actions secret ${name} is required."
-              exit 1
-            fi
-          done
-
-      - name: Pull Vercel preview settings
-        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
-
-      - name: Build preview artifact
-        run: vercel build --token="$VERCEL_TOKEN"
-
-      - name: Deploy preview artifact
-        id: deploy
-        shell: bash
-        run: |
-          deployment_url="$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")"
-          echo "url=${deployment_url}" >> "$GITHUB_OUTPUT"
-          echo "### Vercel preview" >> "$GITHUB_STEP_SUMMARY"
-          echo "${deployment_url}" >> "$GITHUB_STEP_SUMMARY"
-
-  production:
-    name: Deploy Supabase and Vercel production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -127,21 +66,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
 
       - name: Validate deployment secrets
         shell: bash
         run: |
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
             if [ -z "${!name}" ]; then
               echo "::error::GitHub Actions secret ${name} is required."
               exit 1
@@ -156,21 +89,3 @@ jobs:
 
       - name: Deploy Supabase functions
         run: npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy public-form create-checkout stripe-webhook --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt --use-api
-
-      - name: Install Vercel CLI
-        run: npm install --global "vercel@${VERCEL_CLI_VERSION}"
-
-      - name: Pull Vercel production settings
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-
-      - name: Build production artifact
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-
-      - name: Deploy production artifact
-        id: deploy
-        shell: bash
-        run: |
-          deployment_url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
-          echo "url=${deployment_url}" >> "$GITHUB_OUTPUT"
-          echo "### Vercel production" >> "$GITHUB_STEP_SUMMARY"
-          echo "${deployment_url}" >> "$GITHUB_STEP_SUMMARY"

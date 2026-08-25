@@ -95,25 +95,22 @@ The supplied launch film is stored at `public/media/noel-foundation-intro.mp4`. 
 
 ## Vercel CI/CD
 
-The GitHub Actions workflow in `.github/workflows/vercel.yml` is the deployment source of truth:
+The `johnnyvercel/noel-foundation` project uses Vercel's native Git integration as the deployment source of truth:
 
-- Every pull request to `main` must pass typechecking, formatting and a production build before it receives a Vercel Preview deployment.
-- Every push to `main` passes the same quality gate, dry-runs and applies Supabase migrations, deploys the three Edge Functions, and promotes a prebuilt artifact to Vercel Production.
-- Preview deployments use the Vercel `preview` environment. Production uses the GitHub `production` environment, so required reviewers can be enabled in repository environment settings.
-- Concurrent preview runs for the same branch are cancelled; an in-progress production release is never cancelled automatically.
+- Vercel creates a Preview deployment for pull requests and a Production deployment for pushes to `main`.
+- `.github/workflows/vercel.yml` independently runs typechecking, formatting and a production build on every pull request and push to `main`.
+- Vercel reports its own deployment status to GitHub, avoiding duplicate CLI deployments and long-lived Vercel tokens in GitHub Actions.
+- Concurrent quality checks for the same branch are cancelled; a production branch check is never cancelled automatically.
 
-Create these encrypted GitHub Actions secrets before enabling the workflow:
+Supabase release automation is deliberately opt-in. Set the GitHub Actions repository variable `ENABLE_SUPABASE_DEPLOY` to `true`, then create these encrypted secrets before enabling it:
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
 - `SUPABASE_ACCESS_TOKEN`
 - `SUPABASE_PROJECT_REF`
 - `SUPABASE_DB_PASSWORD`
 
 Configure `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` and the optional public URLs in both the Vercel Preview and Production environments. Configure `PUBLIC_SITE_ORIGINS`, `TURNSTILE_SECRET_KEY`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as Supabase function secrets. None of these private values belong in the repository.
 
-The workflow uses pinned Vercel and Supabase CLI versions and deploys a locally built artifact with `vercel deploy --prebuilt`. Build output is generated in `dist/`, and `vercel.json` explicitly fixes the pnpm install, Vite build and SPA routing configuration.
+The optional backend job uses a pinned Supabase CLI version, dry-runs and applies pending migrations, then deploys the three Edge Functions. Build output is generated in `dist/`, and `vercel.json` explicitly fixes the pnpm install, Vite build and SPA routing configuration used by Vercel.
 
 For a rollback, select the last healthy deployment in the Vercel dashboard and promote it to production. Database migrations must remain forward-compatible; use a new corrective migration instead of deleting or rewriting a migration that has already reached production.
 
@@ -123,4 +120,4 @@ Local release validation remains:
 pnpm check
 ```
 
-In GitHub, require the `Quality gate` status check on `main` and protect the `production` environment with the appropriate reviewer. The first Vercel project link supplies the organization and project IDs; keep `.vercel/` local and uncommitted.
+In GitHub, require the `Quality gate` and Vercel deployment checks on `main`. Protect the `production` environment with the appropriate reviewer before enabling Supabase releases. Keep `.vercel/` local and uncommitted.
