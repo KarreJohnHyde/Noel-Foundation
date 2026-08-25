@@ -5,10 +5,10 @@ A responsive, donor-facing website for Noel Foundation, built with React 19, Vit
 ## Experience highlights
 
 - Responsive layouts for phones, tablets, laptops and wide desktop screens
-- Faith & Mission journey with a need-led, non-coercive service covenant and faith-community partnership path
-- Sourced public endorsements and institutional reflections, clearly separated from beneficiary testimony and impact evidence
-- Audience pathways for companies, foundations, churches, individual donors, volunteers and supporters
-- Minimal glass navigation dock with motion and transparency preferences
+- Neutral, community-led journeys for healthcare, education and livelihoods
+- Sourced public milestones clearly separated from beneficiary stories and verified impact evidence
+- Audience pathways for companies, foundations, community organisations, individual donors, volunteers and supporters
+- A clean horizontal navigation system with no floating experience controls
 - Filterable program perspectives with dynamic mosaic and accessible card-stack layouts
 - Evidence-safe verified impact dashboard with public-record coverage views
 - Three-step CSR partnership builder and five-step donation preparation flow
@@ -75,9 +75,11 @@ The migration explicitly grants access and enables RLS on every public-schema ta
 
 Program copy and public contact details live in `src/content.ts`. Public impact numbers are intentionally blank until verified records are published in `impact_metrics`. Donation reconciliation and tax/compliance statements must be approved by Noel Foundation before being shown as confirmed facts.
 
-Faith identity wording, safeguarding commitments and historical endorsement excerpts should receive leadership review before a production release. Published voices link to their existing official source. New beneficiary testimonies require documented consent, fact review, guardian approval for minors, publication approval and a withdrawal workflow; the site does not expose a public auto-publish form.
+Safeguarding commitments and historical source excerpts should receive leadership review before a production release. Published milestones link to their existing official source. New beneficiary stories require documented consent, fact review, guardian approval for minors, publication approval and a withdrawal workflow; the site does not expose a public auto-publish form.
 
-The typography stack supports the local family names `Ways` and `Gwen`, but their commercial font files are not included. Keep the current Manrope and Newsreader web fallbacks until properly licensed vendor WOFF2 packages and web-embedding rights are supplied. Do not convert or publish desktop font files without that licence.
+The typography stack is restricted to the local family names `Ways` and `Gwen`. Their commercial font files are not included, so licensed vendor WOFF2 packages and web-embedding rights must be supplied before those exact faces can render in production. Do not convert or publish desktop font files without that licence.
+
+The loader and landing hero look for the approved film at `public/media/noel-foundation-intro.mp4`. The interface keeps a still-image poster fallback when that file is unavailable, but the MP4 must be restored at that path for video playback.
 
 ## Deployment
 

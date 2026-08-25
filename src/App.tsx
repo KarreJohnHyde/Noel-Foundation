@@ -14,6 +14,7 @@ import { ConsentField, SelectField, TextAreaField, TextField } from "./component
 import HumanVerification from "./components/HumanVerification";
 import Icon, { type IconName } from "./components/Icon";
 import Logo from "./components/Logo";
+import SocialIcon from "./components/SocialIcon";
 import {
   approach,
   contact,
@@ -28,6 +29,7 @@ import {
 import {
   backendConfigured,
   fetchPublicImpactMetrics,
+  impactBackendConfigured,
   submitPublicForm,
   type ImpactMetric,
   type PublicFormPayload,
@@ -73,7 +75,6 @@ const ANNUAL_REPORT_URL = readHttpsUrl(
 const pageTitles: Record<string, string> = {
   "/": "Noel Foundation | Human First. Impact Driven.",
   "/about": "About Noel Foundation",
-  "/about/faith-and-mission": "Faith & Mission | Noel Foundation",
   "/about/story": "Our Story | Noel Foundation",
   "/about/team": "Leadership | Noel Foundation",
   "/about/governance": "Governance | Noel Foundation",
@@ -101,9 +102,7 @@ const pageTitles: Record<string, string> = {
 function normalizePath(path: string) {
   const normalized = path.replace(/\/+$/, "") || "/";
   const aliases: Record<string, string> = {
-    "/about/faith": "/about/faith-and-mission",
     "/partner": "/csr",
-    "/partner/churches": "/about/faith-and-mission",
     "/programmes": "/programs",
     "/privacy-statement": "/privacy",
     "/terms-and-conditions": "/terms",
@@ -299,22 +298,6 @@ function handleRadioGroupKeyDown(event: React.KeyboardEvent<HTMLElement>) {
   radios[nextIndex]?.click();
 }
 
-function readStoredPreference(key: string) {
-  try {
-    return window.localStorage.getItem(key) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-function storePreference(key: string, enabled: boolean) {
-  try {
-    window.localStorage.setItem(key, enabled ? "on" : "off");
-  } catch {
-    // Preferences remain available for this session when browser storage is blocked.
-  }
-}
-
 function SectionHeading({
   eyebrow,
   title,
@@ -361,7 +344,6 @@ function UtilityBar() {
 
 const aboutLinks = [
   { label: "Mission & approach", href: "/about" },
-  { label: "Faith & mission", href: "/about/faith-and-mission" },
   { label: "Our story", href: "/about/story" },
   { label: "Leadership", href: "/about/team" },
   { label: "Governance", href: "/about/governance" },
@@ -375,7 +357,7 @@ const programLinks = programs.map((program) => ({
 const involveLinks = [
   { label: "Volunteer", href: "/volunteer" },
   { label: "Partner with us", href: "/csr" },
-  { label: "Church & faith partners", href: "/about/faith-and-mission#faith-partners" },
+  { label: "Community partnerships", href: "/csr#csr-builder" },
   { label: "Donate", href: "/donate" },
   { label: "Contact", href: "/contact" },
 ];
@@ -488,7 +470,7 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
     if (!menuOpen) return;
     const previousOverflow = document.body.style.overflow;
     const background = document.querySelectorAll<HTMLElement>(
-      ".utility-bar, .site-nav, #main-content, .site-footer, .experience-dock, .experience-panel",
+      ".utility-bar, .site-nav, #main-content, .site-footer",
     );
     document.body.style.overflow = "hidden";
     background.forEach((element) => {
@@ -704,21 +686,31 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
 function Hero({ navigate }: { navigate: Navigate }) {
   return (
     <section className="home-hero">
-      <div className="home-hero__glow home-hero__glow--one" />
-      <div className="home-hero__glow home-hero__glow--two" />
+      <video
+        className="home-hero__video"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        poster="/images/community-relief.jpg"
+        aria-hidden="true"
+      >
+        <source src="/media/noel-foundation-intro.mp4" type="video/mp4" />
+      </video>
+      <div className="home-hero__veil" aria-hidden="true" />
       <div className="container-shell home-hero__grid">
         <div className="home-hero__copy">
           <p className="eyebrow eyebrow--pill">
-            <span /> CSR partnerships for health, education & livelihoods
+            <span /> Community impact across health, education & livelihoods
           </p>
           <h1>
-            Creating <em>measurable</em> impact.
+            Human progress. <em>Measured with care.</em>
           </h1>
           <p className="home-hero__lead">Transforming lives. Building sustainable futures.</p>
           <p className="home-hero__body">
-            Noel Foundation works with corporates, institutions and socially responsible
-            organisations to address critical challenges affecting vulnerable communities through
-            three connected programs.
+            Noel Foundation connects donors, companies and communities with practical programs that
+            advance children's health, education and women's livelihoods across South India.
           </p>
           <div className="button-row">
             <InternalLink
@@ -745,7 +737,7 @@ function Hero({ navigate }: { navigate: Navigate }) {
           </InternalLink>
           <div className="home-hero__principles" aria-label="Noel Foundation commitments">
             <span>
-              <Icon name="cross" /> Christian compassion in action
+              <Icon name="people" /> Community-led delivery
             </span>
             <span>
               <Icon name="verified" /> Verified data only
@@ -881,81 +873,6 @@ function WhyNoel() {
   );
 }
 
-function FaithInAction({ navigate }: { navigate: Navigate }) {
-  const practices: { icon: IconName; title: string; description: string }[] = [
-    {
-      icon: "heart",
-      title: "Compassion",
-      description: "Meet urgent human needs with care, humility and practical support.",
-    },
-    {
-      icon: "shield",
-      title: "Stewardship",
-      description: "Treat every contribution, partnership and story as a responsibility.",
-    },
-    {
-      icon: "spark",
-      title: "Hope",
-      description: "Help people move toward dignity, opportunity and sustainable futures.",
-    },
-  ];
-
-  return (
-    <section className="section faith-in-action" id="faith-in-action" data-reveal>
-      <div className="faith-in-action__glow" aria-hidden="true" />
-      <div className="container-shell faith-in-action__layout">
-        <div className="faith-in-action__copy">
-          <p className="eyebrow eyebrow--light">Faith in action</p>
-          <h2>
-            Rooted in Christian faith. <em>Expressed through service.</em>
-          </h2>
-          <p>
-            Christian faith shapes the spirit in which Noel Foundation seeks to serve: with
-            compassion, humility, hope and responsible stewardship. Programs remain need-driven,
-            community-centred and accountable. Support is offered according to need, without
-            requiring religious participation.
-          </p>
-          <div className="button-row">
-            <InternalLink
-              href="/about/faith-and-mission"
-              navigate={navigate}
-              className="button button--light"
-            >
-              Explore faith &amp; mission <Icon name="arrow" />
-            </InternalLink>
-            <a href="#programs" className="button button--faith-outline">
-              See faith at work
-            </a>
-          </div>
-        </div>
-
-        <aside className="faith-in-action__verse" aria-label="Christian service principle">
-          <span className="faith-in-action__cross">
-            <Icon name="cross" />
-          </span>
-          <blockquote>“Act justly. Love mercy. Walk humbly.”</blockquote>
-          <cite>Micah 6:8</cite>
-          <small>Justice in practice · mercy in relationship · humility in partnership</small>
-        </aside>
-
-        <div className="faith-practices" aria-label="Faith-led service commitments">
-          {practices.map((practice) => (
-            <article key={practice.title}>
-              <span>
-                <Icon name={practice.icon} />
-              </span>
-              <div>
-                <h3>{practice.title}</h3>
-                <p>{practice.description}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 type PublishedVoice = {
   id: string;
   kind: string;
@@ -976,18 +893,17 @@ const publishedVoices: PublishedVoice[] = [
     role: "Speaker, author and business philosopher",
     sourceLabel: "Official endorsements page",
     sourceHref: "https://noelfoundation.in/endorsements/",
-    icon: "spark",
+    icon: "trend",
   },
   {
-    id: "francis-einstein",
-    kind: "Faith-community endorsement",
-    quote: "You are a first class organization…",
-    name: "Francis Einstein",
-    role: "Secretary, Fellowship of Asian Christians in Kenya · as credited in 2019–20",
-    sourceLabel: "2019–20 Annual Report",
-    sourceHref:
-      "https://www.noelfoundation.in/wp-content/uploads/2020/06/NF-Annual-Report-2019-2020.pdf",
-    icon: "cross",
+    id: "foundation-commitment",
+    kind: "Foundation commitment",
+    quote: "Creating healthier children, educated communities and economically empowered families.",
+    name: "Noel Foundation",
+    role: "Published program commitment",
+    sourceLabel: "Official Noel Foundation website",
+    sourceHref: "https://noelfoundation.in/",
+    icon: "verified",
   },
   {
     id: "origin-story",
@@ -1095,19 +1011,19 @@ const audiencePathways: {
       "Align a health, education or livelihoods initiative with your priorities through a structured enquiry and due-diligence pathway.",
     icon: "layers",
     assurances: ["Program-aligned scope", "Reporting conversation", "Document request pathway"],
-    href: "/csr",
+    href: "/csr#csr-builder",
     cta: "Design a partnership",
   },
   {
-    id: "church",
-    label: "Church / faith community",
-    title: "Turn shared compassion into practical service.",
+    id: "community",
+    label: "Community organisation",
+    title: "Turn local insight into practical service.",
     description:
-      "Explore a program, volunteering or community partnership shaped by dignity, stewardship and responsible safeguarding.",
-    icon: "cross",
-    assurances: ["Need-led support", "No coercive participation", "Privacy-aware engagement"],
-    href: "/about/faith-and-mission#faith-partners",
-    cta: "Explore faith partnership",
+      "Explore a program, volunteering or local partnership shaped by dignity, accountability and responsible safeguarding.",
+    icon: "compass",
+    assurances: ["Need-led support", "Community consultation", "Privacy-aware engagement"],
+    href: "/csr",
+    cta: "Explore community partnership",
   },
   {
     id: "donor",
@@ -1146,8 +1062,8 @@ function AudiencePathways({ navigate }: { navigate: Navigate }) {
             One mission. <em>A clearer next step for you.</em>
           </h2>
           <p>
-            A focused starting point for funders, faith communities, donors and supporters—without
-            turning human impact into a software sales funnel.
+            A focused starting point for funders, community organisations, donors and
+            supporters—without turning human impact into a software sales funnel.
           </p>
           <div className="audience-tabs" role="tablist" aria-label="Choose your relationship">
             {audiencePathways.map((pathway) => (
@@ -1250,6 +1166,7 @@ function ProgramCards({ navigate }: { navigate: Navigate }) {
 }
 
 const approachIcons: IconName[] = ["search", "settings", "bolt", "link", "leaf"];
+const approachAccents = ["#ff7a18", "#2563eb", "#ec3d31", "#7c3aed", "#16845b"];
 
 function Approach() {
   return (
@@ -1266,7 +1183,19 @@ function Approach() {
         />
         <ol className="impact-pathway" aria-label="Noel Foundation impact pathway">
           {approach.map((step, index) => (
-            <li key={step.title} className="impact-pathway__step" data-reveal>
+            <li
+              key={step.title}
+              className="impact-pathway__step"
+              tabIndex={0}
+              data-reveal
+              aria-label={`${step.number} ${step.title}: ${step.description}`}
+              style={
+                {
+                  "--step-accent": approachAccents[index],
+                  "--reveal-delay": `${index * 80}ms`,
+                } as React.CSSProperties
+              }
+            >
               <div className="impact-pathway__node">
                 <Icon name={approachIcons[index]} />
               </div>
@@ -1288,8 +1217,58 @@ const fallbackMetricLabels = [
   },
   { label: "Active educational sponsorships", programme: "Education" },
   { label: "Women trained or equipped", programme: "Women's Livelihoods" },
-  { label: "Completed contributions", programme: "Verified donations only" },
+  { label: "Community initiatives with approved reporting", programme: "Foundation-wide" },
 ];
+
+const publishedMilestones: {
+  value: string;
+  label: string;
+  detail: string;
+  icon: IconName;
+  source: string;
+}[] = [
+  {
+    value: "1,680+",
+    label: "Heart surgeries funded",
+    detail: "Published by Noel Foundation on its current donation drive page.",
+    icon: "heart",
+    source: "https://noelfoundation.in/noel-foundation-donation-drive/",
+  },
+  {
+    value: "1,175+",
+    label: "First-generation students supported",
+    detail: "Published by Noel Foundation on its current donation drive page.",
+    icon: "report",
+    source: "https://noelfoundation.in/noel-foundation-donation-drive/",
+  },
+  {
+    value: "2014",
+    label: "Serving communities since",
+    detail: "Foundation history published on the official About page.",
+    icon: "compass",
+    source: "https://noelfoundation.in/about-us/",
+  },
+];
+
+function PublishedMilestones() {
+  return (
+    <div className="published-milestones" aria-label="Milestones published by Noel Foundation">
+      {publishedMilestones.map((milestone) => (
+        <article key={milestone.label}>
+          <span className="published-milestones__icon">
+            <Icon name={milestone.icon} />
+          </span>
+          <strong>{milestone.value}</strong>
+          <h3>{milestone.label}</h3>
+          <p>{milestone.detail}</p>
+          <a href={milestone.source} target="_blank" rel="noreferrer">
+            View published source <Icon name="external" />
+          </a>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 function MetricValue({ metric }: { metric: ImpactMetric }) {
   const value = new Intl.NumberFormat("en-IN").format(metric.value);
@@ -1338,7 +1317,7 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
               <h3>{metric.label}</h3>
               <p>{metric.description || metric.programme || "Verified program record"}</p>
               <small>
-                Verified record updated{" "}
+                Last published{" "}
                 {new Intl.DateTimeFormat("en-IN", {
                   dateStyle: "medium",
                 }).format(new Date(metric.updated_at))}
@@ -1381,26 +1360,38 @@ function ImpactAnalyticsStudio() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [programFilter, setProgramFilter] = useState("All programs");
-  const [view, setView] = useState<"coverage" | "records">("coverage");
+  const [view, setView] = useState<"coverage" | "analysis" | "records">("coverage");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const mountedRef = useRef(true);
   const deferredFilter = useDeferredValue(programFilter);
 
-  useEffect(() => {
-    let active = true;
+  const refreshMetrics = useCallback(() => {
+    setLoadError(false);
     fetchPublicImpactMetrics()
       .then((records) => {
-        if (active) setMetrics(records);
+        if (mountedRef.current) {
+          setMetrics(records);
+          setLastRefreshed(new Date());
+        }
       })
       .catch(() => {
-        if (active) setLoadError(true);
+        if (mountedRef.current) setLoadError(true);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (mountedRef.current) setLoading(false);
       });
-    return () => {
-      active = false;
-    };
   }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    refreshMetrics();
+    const interval = window.setInterval(refreshMetrics, 60_000);
+    return () => {
+      mountedRef.current = false;
+      window.clearInterval(interval);
+    };
+  }, [refreshMetrics]);
 
   const availableReportingAreas = useMemo(
     () =>
@@ -1431,6 +1422,18 @@ function ImpactAnalyticsStudio() {
   const latestRecord = [...visibleMetrics].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   )[0];
+  const metricGroups = useMemo(() => {
+    const groups = new Map<string, ImpactMetric[]>();
+    visibleMetrics.forEach((metric) => {
+      const unit = metric.unit?.trim() || "count";
+      groups.set(unit, [...(groups.get(unit) || []), metric]);
+    });
+    return Array.from(groups, ([unit, records]) => ({
+      unit,
+      records,
+      maximum: Math.max(1, ...records.map((record) => record.value)),
+    }));
+  }, [visibleMetrics]);
 
   return (
     <section className="section impact-studio-section" id="impact-studio" data-reveal>
@@ -1467,7 +1470,59 @@ function ImpactAnalyticsStudio() {
                       : "Ready for approved publication"}
               </small>
             </p>
+            <button
+              type="button"
+              className="impact-refresh"
+              onClick={refreshMetrics}
+              aria-label="Refresh verified impact data"
+              title={
+                lastRefreshed
+                  ? `Last refreshed ${lastRefreshed.toLocaleTimeString("en-IN")}`
+                  : "Refresh verified data"
+              }
+            >
+              <Icon name="trend" />
+            </button>
           </div>
+        </div>
+
+        <div className="analytics-signal-grid" aria-label="Live verified data summary">
+          <article>
+            <span>
+              <Icon name="verified" />
+            </span>
+            <strong>{loadError ? "—" : visibleMetrics.length}</strong>
+            <small>Public verified records</small>
+          </article>
+          <article>
+            <span>
+              <Icon name="layers" />
+            </span>
+            <strong>{loadError ? "—" : `${coveredAreas}/${coverage.length}`}</strong>
+            <small>Reporting areas covered</small>
+          </article>
+          <article>
+            <span>
+              <Icon name="report" />
+            </span>
+            <strong>
+              {loadError || visibleMetrics.length === 0
+                ? "—"
+                : `${sourcedRecords}/${visibleMetrics.length}`}
+            </strong>
+            <small>Source-labelled records</small>
+          </article>
+          <article>
+            <span>
+              <Icon name="trend" />
+            </span>
+            <strong>
+              {lastRefreshed
+                ? lastRefreshed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+                : "—"}
+            </strong>
+            <small>Last data refresh</small>
+          </article>
         </div>
 
         <div className="impact-console glass-panel">
@@ -1480,6 +1535,14 @@ function ImpactAnalyticsStudio() {
                 onClick={() => setView("coverage")}
               >
                 <Icon name="analytics" /> Coverage
+              </button>
+              <button
+                type="button"
+                className={view === "analysis" ? "is-active" : ""}
+                aria-pressed={view === "analysis"}
+                onClick={() => setView("analysis")}
+              >
+                <Icon name="trend" /> Analysis
               </button>
               <button
                 type="button"
@@ -1611,6 +1674,78 @@ function ImpactAnalyticsStudio() {
                 ) : null}
               </article>
             </div>
+          ) : view === "analysis" ? (
+            <div className="unit-analysis-view" aria-live="polite">
+              <header>
+                <div>
+                  <p className="eyebrow">Unit-safe analysis</p>
+                  <h3>Verified values grouped before comparison</h3>
+                </div>
+                <span>
+                  {metricGroups.length} {metricGroups.length === 1 ? "unit group" : "unit groups"}
+                </span>
+              </header>
+              {metricGroups.length > 0 ? (
+                <div className="unit-chart-grid">
+                  {metricGroups.map((group) => (
+                    <article key={group.unit}>
+                      <div className="unit-chart__head">
+                        <span>
+                          <Icon name="analytics" />
+                        </span>
+                        <div>
+                          <small>Unit</small>
+                          <h4>{group.unit}</h4>
+                        </div>
+                      </div>
+                      <div
+                        className="unit-bars"
+                        role="list"
+                        aria-label={`Verified metrics measured in ${group.unit}`}
+                      >
+                        {group.records.map((metric) => (
+                          <div className="unit-bar" key={metric.key} role="listitem">
+                            <div>
+                              <span>{metric.label}</span>
+                              <strong>
+                                <MetricValue metric={metric} />
+                              </strong>
+                            </div>
+                            <span className="unit-bar__track" aria-hidden="true">
+                              <span
+                                style={{
+                                  width: `${Math.max(2, (metric.value / group.maximum) * 100)}%`,
+                                }}
+                              />
+                            </span>
+                            <small>{metric.programme || "Foundation-wide"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="studio-empty-state">
+                  <span>
+                    <Icon name="trend" />
+                  </span>
+                  <div>
+                    <h4>
+                      {loading
+                        ? "Preparing verified analysis"
+                        : loadError
+                          ? "Evidence layer temporarily unavailable"
+                          : "Analysis awaits approved records"}
+                    </h4>
+                    <p>
+                      Charts appear automatically after source-backed records are verified for
+                      public use.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="impact-records-view" aria-live="polite">
               <div className="impact-records-view__head">
@@ -1699,10 +1834,20 @@ function ImpactPreview({ navigate }: { navigate: Navigate }) {
             </span>
           </div>
         </div>
+        <PublishedMilestones />
+        <div className="verified-ledger-heading">
+          <span>
+            <Icon name="verified" />
+          </span>
+          <p>
+            <strong>Live verified ledger</strong>
+            <small>Only approved public records appear below.</small>
+          </p>
+        </div>
         <ImpactMetrics />
         <div className="impact-footer">
           <p>
-            {backendConfigured
+            {impactBackendConfigured
               ? "Verified records are connected to the public data layer."
               : "The public data layer is ready for Noel Foundation's approved records."}
           </p>
@@ -1717,21 +1862,31 @@ function ImpactPreview({ navigate }: { navigate: Navigate }) {
 
 function StoryShowcase({ navigate }: { navigate: Navigate }) {
   const [index, setIndex] = useState(0);
+  const [userPaused, setUserPaused] = useState(false);
+  const [interactionPaused, setInteractionPaused] = useState(false);
+  const pointerStart = useRef<number | null>(null);
   const story = programStories[index];
+  const paused = userPaused || interactionPaused;
   const move = (direction: number) =>
     setIndex((current) => (current + direction + programStories.length) % programStories.length);
+
+  useEffect(() => {
+    if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => move(1), 6200);
+    return () => window.clearInterval(timer);
+  }, [paused]);
 
   return (
     <section className="section story-section">
       <div className="container-shell">
         <SectionHeading
-          eyebrow="Program stories"
+          eyebrow="Stories of impact"
           title={
             <>
-              People are always more important than <em>the platform.</em>
+              Behind every number is a <em>human story.</em>
             </>
           }
-          description="These program lenses explain how support can move through a person's journey without publishing private medical or family details."
+          description="A child receiving care. A student continuing her education. A woman building an independent livelihood. These are not statistics—they are lives moving forward."
         />
         <div
           className="story-showcase"
@@ -1739,13 +1894,41 @@ function StoryShowcase({ navigate }: { navigate: Navigate }) {
           aria-roledescription="carousel"
           aria-label="Program stories"
           tabIndex={0}
+          onPointerEnter={() => setInteractionPaused(true)}
+          onPointerLeave={() => setInteractionPaused(false)}
+          onFocus={() => setInteractionPaused(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setInteractionPaused(false);
+          }}
+          onPointerDown={(event) => {
+            pointerStart.current = event.clientX;
+          }}
+          onPointerUp={(event) => {
+            if (pointerStart.current === null) return;
+            const distance = event.clientX - pointerStart.current;
+            pointerStart.current = null;
+            if (Math.abs(distance) > 45) move(distance > 0 ? -1 : 1);
+          }}
           onKeyDown={(event) => {
-            if (event.key === "ArrowLeft") move(-1);
-            if (event.key === "ArrowRight") move(1);
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              move(-1);
+            }
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              move(1);
+            }
           }}
         >
           <div className="story-showcase__image">
-            <img src={story.image} alt={story.imageAlt} width="900" height="674" loading="lazy" />
+            <img
+              key={story.image}
+              src={story.image}
+              alt={story.imageAlt}
+              width="900"
+              height="674"
+              loading="lazy"
+            />
             <span>
               {String(index + 1).padStart(2, "0")} /{" "}
               {String(programStories.length).padStart(2, "0")}
@@ -1767,6 +1950,17 @@ function StoryShowcase({ navigate }: { navigate: Navigate }) {
               >
                 <Icon name="chevron-left" />
               </button>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setUserPaused((current) => !current)}
+                aria-label={
+                  userPaused ? "Resume automatic story rotation" : "Pause automatic story rotation"
+                }
+                aria-pressed={userPaused}
+              >
+                <Icon name={userPaused ? "play" : "pause"} />
+              </button>
               <div className="story-dots" aria-label="Choose story">
                 {programStories.map((item, itemIndex) => (
                   <button
@@ -1787,6 +1981,9 @@ function StoryShowcase({ navigate }: { navigate: Navigate }) {
               >
                 <Icon name="chevron-right" />
               </button>
+            </div>
+            <div className="story-progress" aria-hidden="true">
+              <span key={index} className={paused ? "is-paused" : ""} />
             </div>
           </div>
         </div>
@@ -1920,15 +2117,15 @@ function GetInvolved({ navigate }: { navigate: Navigate }) {
       icon: "layers",
       title: "Partner",
       description: "Co-create a focused CSR or institutional partnership.",
-      href: "/csr",
+      href: "/csr#csr-builder",
       cta: "Start a conversation",
     },
     {
-      icon: "cross",
-      title: "Faith community",
-      description: "Explore service with a church or faith-based organisation.",
-      href: "/about/faith-and-mission#faith-partners",
-      cta: "Explore partnership",
+      icon: "compass",
+      title: "Community partner",
+      description: "Connect local insight, networks and responsible community engagement.",
+      href: "/csr",
+      cta: "Build a partnership",
     },
   ];
   return (
@@ -2225,8 +2422,7 @@ function HomePage({ navigate }: { navigate: Navigate }) {
       <ProgramCards navigate={navigate} />
       <Approach />
       <ImpactPreview navigate={navigate} />
-      <FaithInAction navigate={navigate} />
-      <PublishedVoices navigate={navigate} />
+      <StoryShowcase navigate={navigate} />
       <AudiencePathways navigate={navigate} />
       <GovernancePreview navigate={navigate} />
       <GetInvolved navigate={navigate} />
@@ -2263,13 +2459,13 @@ function PageHero({
           <div className="page-hero__image">
             <img src={image} alt={imageAlt || ""} width="900" height="674" fetchPriority="high" />
             <span className="page-hero__image-mark">
-              <Icon name="spark" />
+              <Icon name="trend" />
             </span>
           </div>
         ) : (
           <div className="page-hero__statement">
             <span>
-              <Icon name="spark" />
+              <Icon name="compass" />
             </span>
             <strong>Human first.</strong>
             <strong>Impact driven.</strong>
@@ -2451,164 +2647,6 @@ function AboutPage({ path, navigate }: { path: string; navigate: Navigate }) {
             ))}
             <InternalLink href="/reports" navigate={navigate} className="button button--light">
               View reports & documents <Icon name="arrow" />
-            </InternalLink>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function FaithPage({ navigate }: { navigate: Navigate }) {
-  const serviceCommitments: { icon: IconName; title: string; description: string }[] = [
-    {
-      icon: "heart",
-      title: "Compassion",
-      description: "See the person before the program and respond to need with practical care.",
-    },
-    {
-      icon: "people",
-      title: "Dignity",
-      description: "Serve people of every background with respect and without coercion.",
-    },
-    {
-      icon: "shield",
-      title: "Stewardship",
-      description:
-        "Handle funds, partnerships, information and stories as entrusted responsibilities.",
-    },
-    {
-      icon: "spark",
-      title: "Hope",
-      description: "Pair encouragement with pathways toward health, learning and livelihoods.",
-    },
-  ];
-
-  const partnerModels = [
-    {
-      number: "01",
-      title: "Program partnership",
-      description: "Support an approved health, education or livelihoods initiative.",
-    },
-    {
-      number: "02",
-      title: "Volunteer engagement",
-      description: "Offer appropriate professional skills, time or community connections.",
-    },
-    {
-      number: "03",
-      title: "Community mobilisation",
-      description: "Help responsible outreach reach people while preserving dignity and privacy.",
-    },
-  ];
-
-  return (
-    <>
-      <PageHero
-        eyebrow="Faith & mission"
-        title={
-          <>
-            Christian faith. <em>Compassion made practical.</em>
-          </>
-        }
-        description="Christian conviction shapes the spirit of Noel Foundation's service: compassion, humility, hope and responsible stewardship. Support is offered according to need, without requiring religious participation."
-        image="/images/community-relief.jpg"
-        imageAlt="Noel Foundation team members and community members during a relief initiative"
-      >
-        <a href="#service-covenant" className="button button--primary">
-          Read our service covenant <Icon name="arrow" />
-        </a>
-        <InternalLink href="/contact" navigate={navigate} className="button button--secondary">
-          Start a conversation
-        </InternalLink>
-      </PageHero>
-
-      <section className="section faith-covenant" id="service-covenant" data-reveal>
-        <div className="container-shell">
-          <div className="faith-covenant__heading">
-            <SectionHeading
-              eyebrow="Our service covenant"
-              title={
-                <>
-                  Faith is expressed in <em>how people are treated.</em>
-                </>
-              }
-              description="These commitments translate faith language into conduct that funders, communities and supporters can evaluate."
-            />
-            <div className="faith-covenant__principle glass-panel">
-              <Icon name="cross" />
-              <p>
-                <strong>Service before symbolism.</strong>
-                Programs remain need-led, professionally coordinated, consent-aware and accountable.
-              </p>
-            </div>
-          </div>
-          <div className="faith-covenant__grid">
-            {serviceCommitments.map((commitment, index) => (
-              <article key={commitment.title}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <Icon name={commitment.icon} />
-                <h2>{commitment.title}</h2>
-                <p>{commitment.description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section faith-source" data-reveal>
-        <div className="container-shell faith-source__grid">
-          <div>
-            <p className="eyebrow eyebrow--light">A published faith voice</p>
-            <blockquote>
-              “To God be the glory for great things he has done through your effort.”
-            </blockquote>
-            <p>
-              Krish &amp; Anila Dhanam · appreciation letter published in Noel Foundation's 2019–20
-              Annual Report
-            </p>
-          </div>
-          <a
-            href="https://www.noelfoundation.in/wp-content/uploads/2020/06/NF-Annual-Report-2019-2020.pdf"
-            target="_blank"
-            rel="noreferrer"
-            className="faith-source__link"
-          >
-            <span>
-              <Icon name="report" />
-            </span>
-            <span>
-              <strong>Read the historic source</strong>
-              <small>2019–20 Annual Report · published endorsement</small>
-            </span>
-            <Icon name="external" />
-          </a>
-        </div>
-      </section>
-
-      <section className="section section--cream faith-partners" id="faith-partners">
-        <div className="container-shell faith-partners__grid">
-          <SectionHeading
-            eyebrow="Churches & faith-based organisations"
-            title={
-              <>
-                Shared compassion. <em>Responsible partnership.</em>
-              </>
-            }
-            description="Faith communities can explore a focused partnership while safeguarding beneficiary choice, privacy and program integrity."
-          />
-          <div className="faith-partner-list">
-            {partnerModels.map((model) => (
-              <article key={model.number}>
-                <span>{model.number}</span>
-                <div>
-                  <h3>{model.title}</h3>
-                  <p>{model.description}</p>
-                </div>
-              </article>
-            ))}
-            <InternalLink href="/contact" navigate={navigate} className="button button--dark">
-              Discuss a faith-community partnership <Icon name="arrow" />
             </InternalLink>
           </div>
         </div>
@@ -2801,7 +2839,7 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
                   A public dashboard built around <em>trust.</em>
                 </>
               }
-              description="Only records marked Verified and approved for public visibility can appear below. Completed donations are the only contributions eligible for public totals."
+              description="Only records marked Verified and approved for public visibility can appear below. Contribution totals remain private until a refund-aware payment integration is authorised."
             />
             <div className="verification-badge">
               <Icon name="shield" />
@@ -2810,6 +2848,16 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
                 <small>No donor or volunteer details are public</small>
               </span>
             </div>
+          </div>
+          <PublishedMilestones />
+          <div className="verified-ledger-heading">
+            <span>
+              <Icon name="verified" />
+            </span>
+            <p>
+              <strong>Live verified ledger</strong>
+              <small>Source-backed records update from the public data layer.</small>
+            </p>
           </div>
           <ImpactMetrics />
         </div>
@@ -2945,7 +2993,7 @@ const storyPrograms = [
 function StoriesPage({ navigate }: { navigate: Navigate }) {
   const [programFilter, setProgramFilter] = useState("All programs");
   const [formatFilter, setFormatFilter] = useState("All formats");
-  const [layout, setLayout] = useState<"mosaic" | "stack">("mosaic");
+  const [layout, setLayout] = useState<"mosaic" | "stack">("stack");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
@@ -4347,7 +4395,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                               ? "report"
                               : item.includes("Livelihood")
                                 ? "leaf"
-                                : "spark"
+                                : "compass"
                         }
                       />
                       <span>
@@ -4777,16 +4825,19 @@ function ContactPage() {
                 </div>
               </div>
             </div>
-            <div className="social-row">
+            <div className="social-row" aria-label="Noel Foundation social channels">
               {socialLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
                   target="_blank"
                   rel="noreferrer"
+                  data-network={link.label.toLowerCase()}
                   aria-label={`Noel Foundation on ${link.label}`}
                 >
-                  {link.label.slice(0, 2)}
+                  <SocialIcon
+                    network={link.label as "Facebook" | "Instagram" | "LinkedIn" | "YouTube"}
+                  />
                 </a>
               ))}
             </div>
@@ -5005,16 +5056,19 @@ function Footer({ navigate }: { navigate: Navigate }) {
           <p>
             Creating healthier children, educated communities and economically empowered families.
           </p>
-          <div className="social-row">
+          <div className="social-row" aria-label="Noel Foundation social channels">
             {socialLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
+                data-network={link.label.toLowerCase()}
                 aria-label={`Noel Foundation on ${link.label}`}
               >
-                {link.label.slice(0, 2)}
+                <SocialIcon
+                  network={link.label as "Facebook" | "Instagram" | "LinkedIn" | "YouTube"}
+                />
               </a>
             ))}
           </div>
@@ -5069,14 +5123,20 @@ function LoadingScreen({ visible }: { visible: boolean }) {
   if (!visible) return null;
   return (
     <div className="loading-screen" role="status" aria-label="Loading Noel Foundation">
-      <div className="loading-screen__halo" aria-hidden="true" />
+      <video
+        className="loading-screen__video"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        poster="/images/community-relief.jpg"
+        aria-hidden="true"
+      >
+        <source src="/media/noel-foundation-intro.mp4" type="video/mp4" />
+      </video>
+      <div className="loading-screen__veil" aria-hidden="true" />
       <div className="loading-screen__brand">
         <Logo inverse />
-        <div className="loading-screen__orbit" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
         <p>Human first. Impact driven.</p>
       </div>
       <div className="loading-screen__track" aria-hidden="true">
@@ -5086,191 +5146,8 @@ function LoadingScreen({ visible }: { visible: boolean }) {
   );
 }
 
-function ExperienceDock({
-  path,
-  navigate,
-  motionEnabled,
-  onToggleMotion,
-  glassEnabled,
-  onToggleGlass,
-}: {
-  path: string;
-  navigate: Navigate;
-  motionEnabled: boolean;
-  onToggleMotion: () => void;
-  glassEnabled: boolean;
-  onToggleGlass: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const visible = useScrolled(240);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dockLinks: { label: string; shortLabel: string; href: string; icon: IconName }[] = [
-    { label: "Home", shortLabel: "Home", href: "/", icon: "home" },
-    { label: "Programs", shortLabel: "Programs", href: "/programs", icon: "layers" },
-    { label: "Verified impact", shortLabel: "Impact", href: "/impact", icon: "analytics" },
-    { label: "Program perspectives", shortLabel: "Stories", href: "/stories", icon: "grid" },
-    { label: "Donate", shortLabel: "Donate", href: "/donate", icon: "heart" },
-  ];
-
-  useEffect(() => setOpen(false), [path]);
-
-  const closePanel = () => {
-    setOpen(false);
-    window.requestAnimationFrame(() => triggerRef.current?.focus());
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      closePanel();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  const isCurrent = (href: string) =>
-    href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
-
-  return (
-    <>
-      <div className={visible ? "experience-dock experience-dock--visible" : "experience-dock"}>
-        <nav aria-label="Quick navigation">
-          {dockLinks.map((item) => (
-            <InternalLink
-              key={item.href}
-              href={item.href}
-              navigate={navigate}
-              className={isCurrent(item.href) ? "dock-link dock-link--active" : "dock-link"}
-              aria-current={isCurrent(item.href) ? "page" : undefined}
-              aria-label={item.label}
-              data-label={item.label}
-            >
-              <Icon name={item.icon} />
-              <span>{item.shortLabel}</span>
-            </InternalLink>
-          ))}
-          <button
-            ref={triggerRef}
-            type="button"
-            className={
-              open ? "dock-link dock-link--active dock-settings" : "dock-link dock-settings"
-            }
-            aria-label="Open experience settings"
-            aria-expanded={open}
-            aria-controls="experience-settings"
-            data-label="Experience settings"
-            onClick={() => setOpen((current) => !current)}
-          >
-            <Icon name="settings" />
-            <span>More</span>
-          </button>
-        </nav>
-      </div>
-
-      {open ? (
-        <aside
-          className="experience-panel glass-panel"
-          id="experience-settings"
-          aria-label="Experience settings"
-        >
-          <header>
-            <div>
-              <p className="eyebrow">Display & shortcuts</p>
-              <h2>Your browsing preferences.</h2>
-            </div>
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Close experience settings"
-              onClick={closePanel}
-            >
-              <Icon name="close" />
-            </button>
-          </header>
-          <div className="experience-panel__toggles">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={motionEnabled}
-              onClick={onToggleMotion}
-            >
-              <span>
-                <Icon name={motionEnabled ? "spark" : "pause"} />
-              </span>
-              <span>
-                <strong>Scroll reveals</strong>
-                <small>
-                  {motionEnabled ? "Enabled while browsing" : "Paused for this browser"}
-                </small>
-              </span>
-              <i aria-hidden="true">
-                <span />
-              </i>
-            </button>
-            <button type="button" role="switch" aria-checked={glassEnabled} onClick={onToggleGlass}>
-              <span>
-                <Icon name="layers" />
-              </span>
-              <span>
-                <strong>Glass effects</strong>
-                <small>{glassEnabled ? "Depth and blur enabled" : "Solid surfaces enabled"}</small>
-              </span>
-              <i aria-hidden="true">
-                <span />
-              </i>
-            </button>
-          </div>
-          <nav aria-label="Experience shortcuts">
-            <InternalLink href="/impact" navigate={navigate}>
-              <span>
-                <Icon name="analytics" />
-                <strong>Verified impact dashboard</strong>
-              </span>
-              <Icon name="arrow" />
-            </InternalLink>
-            <InternalLink href="/testimonies" navigate={navigate}>
-              <span>
-                <Icon name="spark" />
-                <strong>Published testimonies</strong>
-              </span>
-              <Icon name="arrow" />
-            </InternalLink>
-            <InternalLink href="/about/faith-and-mission" navigate={navigate}>
-              <span>
-                <Icon name="cross" />
-                <strong>Faith & mission</strong>
-              </span>
-              <Icon name="arrow" />
-            </InternalLink>
-            <InternalLink href="/csr#csr-builder" navigate={navigate}>
-              <span>
-                <Icon name="link" />
-                <strong>Partner enquiry</strong>
-              </span>
-              <Icon name="arrow" />
-            </InternalLink>
-          </nav>
-          <button
-            type="button"
-            className="experience-panel__top"
-            onClick={() => {
-              const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-              window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-              setOpen(false);
-            }}
-          >
-            Back to top <Icon name="chevron-down" />
-          </button>
-        </aside>
-      ) : null}
-    </>
-  );
-}
-
 function AppRoutes({ path, navigate }: { path: string; navigate: Navigate }) {
   if (path === "/") return <HomePage navigate={navigate} />;
-  if (path === "/about/faith-and-mission") return <FaithPage navigate={navigate} />;
   if (["/about", "/about/story", "/about/team", "/about/governance"].includes(path))
     return <AboutPage path={path} navigate={navigate} />;
   if (
@@ -5303,26 +5180,21 @@ export default function App() {
   const initialPath = useRef(true);
   const revealObserver = useRef<IntersectionObserver | null>(null);
   const [booting, setBooting] = useState(true);
-  const [motionEnabled, setMotionEnabled] = useState(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
-    return readStoredPreference("noel-motion");
-  });
-  const [glassEnabled, setGlassEnabled] = useState(() => readStoredPreference("noel-glass"));
+  const motionEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const glassEnabled = true;
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => setBooting(false), reducedMotion ? 120 : 880);
+    const timer = window.setTimeout(() => setBooting(false), reducedMotion ? 120 : 1700);
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.motion = motionEnabled ? "on" : "off";
-    storePreference("noel-motion", motionEnabled);
   }, [motionEnabled]);
 
   useEffect(() => {
     document.documentElement.dataset.glass = glassEnabled ? "on" : "off";
-    storePreference("noel-glass", glassEnabled);
   }, [glassEnabled]);
 
   useEffect(() => {
@@ -5330,7 +5202,7 @@ export default function App() {
       const nodes = Array.from(
         new Set(
           document.querySelectorAll<HTMLElement>(
-            "#main-content .section-heading, #main-content .page-hero__copy, #main-content [data-reveal]",
+            "#main-content .section-heading, #main-content .page-hero__copy, #main-content [data-reveal], #main-content .program-card, #main-content .metric-card, #main-content .value-card, #main-content .involved-card, #main-content .collection-card, #main-content .governance-grid > a",
           ),
         ),
       );
@@ -5345,12 +5217,10 @@ export default function App() {
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            entry.target.classList.add("is-revealed");
-            observer.unobserve(entry.target);
+            entry.target.classList.toggle("is-revealed", entry.isIntersecting);
           });
         },
-        { threshold: 0.08, rootMargin: "4% 0px -8% 0px" },
+        { threshold: 0.08, rootMargin: "4% 0px -10% 0px" },
       );
       nodes.forEach((node) => observer.observe(node));
       revealObserver.current = observer;
@@ -5396,14 +5266,6 @@ export default function App() {
           <AppRoutes path={path} navigate={navigate} />
         </main>
         <Footer navigate={navigate} />
-        <ExperienceDock
-          path={path}
-          navigate={navigate}
-          motionEnabled={motionEnabled}
-          onToggleMotion={() => setMotionEnabled((current) => !current)}
-          glassEnabled={glassEnabled}
-          onToggleGlass={() => setGlassEnabled((current) => !current)}
-        />
       </div>
     </div>
   );

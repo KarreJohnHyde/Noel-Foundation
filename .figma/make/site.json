@@ -9,7 +9,7 @@
     "icon": "/images/noel-logo.png"
   },
   "openGraph": {
-    "image": "https://noelfoundation.in/images/community-relief.jpg"
+    "image": "https://noel-foundation.cyjohn.chatgpt.site/og.png"
   },
   "customScripts": {
     "headEnd": "<meta name=\"theme-color\" content=\"#173f8f\"><meta property=\"og:type\" content=\"website\"><meta property=\"og:url\" content=\"https://noelfoundation.in/\"><link rel=\"canonical\" href=\"https://noelfoundation.in/\"><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"NGO\",\"name\":\"Noel Foundation\",\"url\":\"https://noelfoundation.in/\",\"logo\":\"https://noelfoundation.in/images/noel-logo.png\",\"description\":\"Creating healthier children, educated communities and economically empowered families.\",\"email\":\"info@noelfoundation.org\",\"telephone\":\"+91-9444245151\",\"address\":{\"@type\":\"PostalAddress\",\"streetAddress\":\"G2-305, KG Signature City, 200 Feet Bypass Road, Maduravoyal\",\"addressLocality\":\"Chennai\",\"postalCode\":\"600095\",\"addressRegion\":\"Tamil Nadu\",\"addressCountry\":\"IN\"}}</script>"

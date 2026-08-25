@@ -11,7 +11,6 @@ export type IconName =
   | "chevron-right"
   | "close"
   | "compass"
-  | "cross"
   | "download"
   | "external"
   | "filter"
@@ -27,12 +26,12 @@ export type IconName =
   | "phone"
   | "pin"
   | "pause"
+  | "play"
   | "report"
   | "search"
   | "settings"
   | "shield"
   | "sliders"
-  | "spark"
   | "trend"
   | "verified"
   | "wallet";
@@ -58,7 +57,6 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="m15.2 8.8-2 4.4-4.4 2 2-4.4 4.4-2Z" />
     </>
   ),
-  cross: <path d="M10 3h4v6h5v4h-5v8h-4v-8H5V9h5V3Z" />,
   download: <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" />,
   external: <path d="M14 5h5v5m0-5-9 9M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
   filter: <path d="M4 5h16l-6.3 7.2V19l-3.4 1.8v-8.6L4 5Z" />,
@@ -113,6 +111,12 @@ const paths: Record<IconName, React.ReactNode> = {
       <circle cx="12" cy="12" r="9" />
     </>
   ),
+  play: (
+    <>
+      <path d="m9 8 6 4-6 4V8Z" />
+      <circle cx="12" cy="12" r="9" />
+    </>
+  ),
   report: (
     <>
       <path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
@@ -139,9 +143,6 @@ const paths: Record<IconName, React.ReactNode> = {
       <circle cx="16" cy="12" r="2" />
       <circle cx="8" cy="18" r="2" />
     </>
-  ),
-  spark: (
-    <path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Zm7 12 .6 2.4L22 18l-2.4.6L19 21l-.6-2.4L16 18l2.4-.6L19 15Z" />
   ),
   trend: <path d="M4 17 10 11l4 4 6-8M15 7h5v5" />,
   verified: (

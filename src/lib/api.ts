@@ -167,4 +167,5 @@ export function fetchPublicImpactMetrics(): Promise<ImpactMetric[]> {
   return impactMetricsRequest;
 }
 
-export const backendConfigured = Boolean(supabaseUrl && publishableKey && turnstileSiteKey);
+export const impactBackendConfigured = Boolean(supabaseUrl && publishableKey);
+export const backendConfigured = Boolean(impactBackendConfigured && turnstileSiteKey);
