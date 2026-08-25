@@ -3,7 +3,9 @@ import {
   type MouseEvent,
   type ReactNode,
   useCallback,
+  useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -79,6 +81,7 @@ const pageTitles: Record<string, string> = {
   "/programs/womens-livelihoods": "Women's Livelihoods | Noel Foundation",
   "/impact": "Our Impact | Noel Foundation",
   "/impact/live": "Verified Impact | Noel Foundation",
+  "/impact/studio": "Impact Studio | Noel Foundation",
   "/stories": "Stories | Noel Foundation",
   "/events": "Events & Updates | Noel Foundation",
   "/csr": "CSR Partnerships | Noel Foundation",
@@ -104,11 +107,16 @@ function normalizePath(path: string) {
 
 function useNavigation() {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const [routeBusy, setRouteBusy] = useState(false);
+  const routeTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const onPopState = () => setPath(normalizePath(window.location.pathname));
     window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+      if (routeTimer.current) window.clearTimeout(routeTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -139,17 +147,23 @@ function useNavigation() {
     if (`${window.location.pathname}${window.location.hash}` !== `${url.pathname}${url.hash}`) {
       window.history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
     }
+    setRouteBusy(true);
+    if (routeTimer.current) window.clearTimeout(routeTimer.current);
+    routeTimer.current = window.setTimeout(() => setRouteBusy(false), 460);
     setPath(next);
     window.requestAnimationFrame(() => {
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (url.hash) {
-        document.querySelector(url.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document
+          .querySelector(url.hash)
+          ?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
       } else {
         window.scrollTo({ top: 0, behavior: "auto" });
       }
     });
   }, []);
 
-  return { path, navigate };
+  return { path, navigate, routeBusy };
 }
 
 function useScrolled(threshold = 24) {
@@ -415,7 +429,7 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
     if (!menuOpen) return;
     const previousOverflow = document.body.style.overflow;
     const background = document.querySelectorAll<HTMLElement>(
-      ".utility-bar, .site-nav, #main-content, .site-footer, .floating-actions",
+      ".utility-bar, .site-nav, #main-content, .site-footer, .experience-dock, .experience-panel",
     );
     document.body.style.overflow = "hidden";
     background.forEach((element) => {
@@ -875,32 +889,33 @@ function ProgramCards({ navigate }: { navigate: Navigate }) {
   );
 }
 
+const approachIcons: IconName[] = ["search", "settings", "bolt", "link", "leaf"];
+
 function Approach() {
   return (
-    <section className="section section--ink">
+    <section className="section impact-model" data-reveal>
       <div className="container-shell">
         <SectionHeading
-          eyebrow="How impact is built"
+          eyebrow="Our impact model"
           title={
             <>
-              From investment to <em>lasting change.</em>
+              From CSR investment to <em>sustainable change.</em>
             </>
           }
-          description="A practical pathway for designing, delivering and strengthening community programs over time."
-          invert
+          description="We follow a simple impact pathway that turns investment into lasting transformation."
         />
-        <div className="approach-grid">
+        <ol className="impact-pathway" aria-label="Noel Foundation impact pathway">
           {approach.map((step, index) => (
-            <article key={step.title} className="approach-step">
-              <div className="approach-step__top">
-                <span>{step.number}</span>
-                {index < approach.length - 1 ? <Icon name="arrow" /> : <Icon name="verified" />}
+            <li key={step.title} className="impact-pathway__step" data-reveal>
+              <div className="impact-pathway__node">
+                <Icon name={approachIcons[index]} />
               </div>
+              <span className="impact-pathway__number">{step.number}</span>
               <h3>{step.title}</h3>
               <p>{step.description}</p>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );
@@ -950,7 +965,7 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
         ? metrics.map((metric) => (
             <article key={metric.key} className="metric-card">
               <div className="metric-card__head">
-                <span className="live-dot" />
+                <Icon name="verified" />
                 <span>Verified</span>
               </div>
               <strong>
@@ -959,11 +974,14 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
               <h3>{metric.label}</h3>
               <p>{metric.description || metric.programme || "Verified program record"}</p>
               <small>
-                Updated{" "}
+                Verified record updated{" "}
                 {new Intl.DateTimeFormat("en-IN", {
                   dateStyle: "medium",
                 }).format(new Date(metric.updated_at))}
               </small>
+              {metric.source ? (
+                <small className="metric-card__source">Source: {metric.source}</small>
+              ) : null}
             </article>
           ))
         : fallbackMetricLabels.map((metric) => (
@@ -981,6 +999,268 @@ function ImpactMetrics({ compact = false }: { compact?: boolean }) {
             </article>
           ))}
     </div>
+  );
+}
+
+const reportingAreas = ["Children's Health", "Education", "Women's Livelihoods", "Community"];
+
+function ImpactAnalyticsStudio() {
+  const [metrics, setMetrics] = useState<ImpactMetric[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [programFilter, setProgramFilter] = useState("All programs");
+  const [view, setView] = useState<"coverage" | "records">("coverage");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const deferredFilter = useDeferredValue(programFilter);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublicImpactMetrics()
+      .then((records) => {
+        if (active) setMetrics(records);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visibleMetrics = useMemo(
+    () =>
+      deferredFilter === "All programs"
+        ? metrics
+        : metrics.filter((metric) => metric.programme === deferredFilter),
+    [deferredFilter, metrics],
+  );
+
+  const coverage = useMemo(
+    () =>
+      reportingAreas.map((area) => ({
+        area,
+        count: metrics.filter((metric) => metric.programme === area).length,
+      })),
+    [metrics],
+  );
+  const maximumCount = Math.max(1, ...coverage.map((item) => item.count));
+  const coveredAreas = coverage.filter((item) => item.count > 0).length;
+  const sourcedRecords = metrics.filter((metric) => Boolean(metric.source)).length;
+  const latestRecord = [...metrics].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )[0];
+
+  return (
+    <section className="section impact-studio-section" id="impact-studio" data-reveal>
+      <div className="container-shell">
+        <div className="impact-studio__intro">
+          <SectionHeading
+            eyebrow="Interactive impact studio"
+            title={
+              <>
+                Advanced visibility. <em>Evidence before spectacle.</em>
+              </>
+            }
+            description="Explore publication coverage and verified records without combining unlike units or inventing a trend. Filters change only the approved public evidence shown below."
+          />
+          <div className="impact-studio__status glass-panel">
+            <span className="status-orbit" aria-hidden="true">
+              <Icon name="analytics" />
+            </span>
+            <p>
+              <strong>{metrics.length} verified public records</strong>
+              <small>
+                {latestRecord
+                  ? `Latest record updated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(latestRecord.updated_at))}`
+                  : loading
+                    ? "Checking the approved evidence layer"
+                    : "Ready for approved publication"}
+              </small>
+            </p>
+          </div>
+        </div>
+
+        <div className="impact-console glass-panel">
+          <div className="impact-console__toolbar">
+            <div className="segmented-control" aria-label="Impact studio view">
+              <button
+                type="button"
+                className={view === "coverage" ? "is-active" : ""}
+                aria-pressed={view === "coverage"}
+                onClick={() => setView("coverage")}
+              >
+                <Icon name="analytics" /> Coverage
+              </button>
+              <button
+                type="button"
+                className={view === "records" ? "is-active" : ""}
+                aria-pressed={view === "records"}
+                onClick={() => setView("records")}
+              >
+                <Icon name="grid" /> Records
+              </button>
+            </div>
+            <button
+              type="button"
+              className={filtersOpen ? "filter-trigger filter-trigger--active" : "filter-trigger"}
+              aria-expanded={filtersOpen}
+              aria-controls="impact-filter-panel"
+              onClick={() => setFiltersOpen((current) => !current)}
+            >
+              <Icon name="sliders" /> Filter settings
+              {programFilter !== "All programs" ? <span>1</span> : null}
+            </button>
+          </div>
+
+          {filtersOpen ? (
+            <div className="impact-filter-panel" id="impact-filter-panel">
+              <div>
+                <p className="eyebrow">Program filter</p>
+                <p>Choose one public reporting area. Verification status is never optional.</p>
+              </div>
+              <div className="filter-chip-row" role="group" aria-label="Filter by program">
+                {["All programs", ...reportingAreas].map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={
+                      programFilter === item ? "filter-chip filter-chip--active" : "filter-chip"
+                    }
+                    aria-pressed={programFilter === item}
+                    onClick={() => setProgramFilter(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="text-button"
+                disabled={programFilter === "All programs"}
+                onClick={() => setProgramFilter("All programs")}
+              >
+                Clear filter
+              </button>
+            </div>
+          ) : null}
+
+          {view === "coverage" ? (
+            <div className="impact-analytics-grid" aria-live="polite">
+              <article className="coverage-summary">
+                <div
+                  className="coverage-ring"
+                  style={
+                    {
+                      "--coverage": `${(coveredAreas / reportingAreas.length) * 360}deg`,
+                    } as React.CSSProperties
+                  }
+                  aria-label={`${coveredAreas} of ${reportingAreas.length} reporting areas currently have verified public records`}
+                >
+                  <span>
+                    <strong>{coveredAreas}</strong>
+                    <small>of {reportingAreas.length} areas</small>
+                  </span>
+                </div>
+                <div>
+                  <p className="eyebrow">Publication coverage</p>
+                  <h3>Evidence by reporting area</h3>
+                  <p>
+                    This shows where verified public metric records exist. It is not a beneficiary
+                    total or impact score.
+                  </p>
+                </div>
+              </article>
+              <article className="coverage-chart">
+                <header>
+                  <div>
+                    <p className="eyebrow">Comparison</p>
+                    <h3>Published metric records by program</h3>
+                  </div>
+                  <span>
+                    {sourcedRecords}/{metrics.length || 0} source-labelled
+                  </span>
+                </header>
+                <div
+                  className="coverage-bars"
+                  role="list"
+                  aria-label="Published record counts by program"
+                >
+                  {coverage.map((item) => (
+                    <div className="coverage-bar" key={item.area} role="listitem">
+                      <div>
+                        <span>{item.area}</span>
+                        <strong>{item.count}</strong>
+                      </div>
+                      <span className="coverage-bar__track" aria-hidden="true">
+                        <span style={{ width: `${(item.count / maximumCount) * 100}%` }} />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {!loading && metrics.length === 0 ? (
+                  <p className="chart-empty">
+                    <Icon name="shield" /> No approved records are public yet. The visualization
+                    will populate automatically after verification.
+                  </p>
+                ) : null}
+              </article>
+            </div>
+          ) : (
+            <div className="impact-records-view" aria-live="polite">
+              <div className="impact-records-view__head">
+                <div>
+                  <p className="eyebrow">Verified records</p>
+                  <h3>{programFilter}</h3>
+                </div>
+                <span>{visibleMetrics.length} records</span>
+              </div>
+              {visibleMetrics.length > 0 ? (
+                <div className="impact-record-list">
+                  {visibleMetrics.map((metric) => (
+                    <article key={metric.key}>
+                      <span className="record-icon">
+                        <Icon name="verified" />
+                      </span>
+                      <div>
+                        <small>{metric.programme || "Foundation-wide"}</small>
+                        <h4>{metric.label}</h4>
+                        <p>{metric.description || "Verified public program record"}</p>
+                      </div>
+                      <strong>
+                        <MetricValue metric={metric} />
+                      </strong>
+                      <small>
+                        {metric.source ? `Source: ${metric.source}` : "Source label pending"}
+                      </small>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="studio-empty-state">
+                  <span>
+                    <Icon name="analytics" />
+                  </span>
+                  <div>
+                    <h4>
+                      {loading ? "Loading verified records" : "No verified records in this view"}
+                    </h4>
+                    <p>
+                      {loading
+                        ? "The approved public evidence layer is being checked."
+                        : "Try another program filter or return after approved records are published."}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <p className="impact-studio__method">
+          <Icon name="shield" /> Charts count approved public metric records only. Values with
+          different units are never added together.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -1864,7 +2144,8 @@ function ProgramsPage({ path, navigate }: { path: string; navigate: Navigate }) 
 }
 
 function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
-  const live = path === "/impact/live";
+  const live = path === "/impact/live" || path === "/impact/studio";
+  const studio = path === "/impact/studio";
   const categories = [
     {
       title: "Health",
@@ -1894,9 +2175,13 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
   return (
     <>
       <PageHero
-        eyebrow={live ? "Verified public impact" : "Our impact approach"}
+        eyebrow={studio ? "Impact studio" : live ? "Verified public impact" : "Our impact approach"}
         title={
-          live ? (
+          studio ? (
+            <>
+              Explore evidence with <em>clarity and control.</em>
+            </>
+          ) : live ? (
             <>
               Our impact, <em>updated after verification.</em>
             </>
@@ -1907,9 +2192,11 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
           )
         }
         description={
-          live
-            ? "Approved program records appear here after review. Medical and beneficiary data is never described as instantaneous, and private information stays private."
-            : "Noel Foundation's impact framework connects program delivery, outcome tracking and responsible public reporting."
+          studio
+            ? "Filter approved public records, inspect reporting coverage and review sources through an interactive, privacy-aware evidence console."
+            : live
+              ? "Approved program records appear here after review. Medical and beneficiary data is never described as instantaneous, and private information stays private."
+              : "Noel Foundation's impact framework connects program delivery, outcome tracking and responsible public reporting."
         }
       >
         <InternalLink href="/reports" navigate={navigate} className="button button--primary">
@@ -1948,6 +2235,7 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
           <ImpactMetrics />
         </div>
       </section>
+      <ImpactAnalyticsStudio />
       <section className="section">
         <div className="container-shell">
           <SectionHeading
@@ -2003,75 +2291,329 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
   );
 }
 
+type StoryCollectionItem = {
+  id: string;
+  tag: "Children's Health" | "Education" | "Community" | "Women's Livelihoods";
+  format: "Human story" | "Field archive";
+  title: string;
+  description: string;
+  image: string;
+  imageAlt: string;
+  href: string;
+};
+
+const storyCollectionItems: StoryCollectionItem[] = [
+  ...programStories.map((story, index) => ({
+    ...story,
+    id: `program-story-${index + 1}`,
+    tag: story.tag as StoryCollectionItem["tag"],
+    format: "Human story" as const,
+  })),
+  {
+    id: "care-visit",
+    tag: "Children's Health",
+    format: "Field archive",
+    title: "Care begins with a human conversation",
+    description:
+      "A privacy-aware field perspective on the coordination, listening and family guidance that surround a care journey.",
+    image: "/images/pediatric-care-visit.jpg",
+    imageAlt: "A Noel Foundation representative speaking with a child during a hospital visit",
+    href: "/programs/childrens-health",
+  },
+  {
+    id: "learning-continuity",
+    tag: "Education",
+    format: "Field archive",
+    title: "Learning support that reaches the next day",
+    description:
+      "Education materials and continuing guidance can help learners remain connected to school and future opportunity.",
+    image: "/images/education-outreach.jpg",
+    imageAlt: "A Noel Foundation education outreach gathering",
+    href: "/programs/education",
+  },
+  {
+    id: "community-network",
+    tag: "Community",
+    format: "Field archive",
+    title: "Community reach, built person by person",
+    description:
+      "Archive photography documents local outreach while public captions remain careful about dates, identities and outcomes.",
+    image: "/images/outreach-team.jpg",
+    imageAlt: "Noel Foundation team members at a community outreach initiative",
+    href: "/programs",
+  },
+  {
+    id: "women-livelihoods",
+    tag: "Women's Livelihoods",
+    format: "Human story",
+    title: "Capability can become independence",
+    description:
+      "Skills, tools and practical linkages create a pathway through which women can pursue income with greater agency.",
+    image: "/images/community-food-support.jpg",
+    imageAlt: "Women taking part in a Noel Foundation community support initiative",
+    href: "/programs/womens-livelihoods",
+  },
+];
+
+const storyPrograms = [
+  "All programs",
+  "Children's Health",
+  "Education",
+  "Women's Livelihoods",
+  "Community",
+];
+
 function StoriesPage({ navigate }: { navigate: Navigate }) {
-  const [filter, setFilter] = useState("All");
-  const filters = ["All", "Children's Health", "Education", "Community"];
-  const visible =
-    filter === "All" ? programStories : programStories.filter((story) => story.tag === filter);
+  const [programFilter, setProgramFilter] = useState("All programs");
+  const [formatFilter, setFormatFilter] = useState("All formats");
+  const [layout, setLayout] = useState<"mosaic" | "stack">("mosaic");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+  const visible = useMemo(
+    () =>
+      storyCollectionItems.filter((story) => {
+        const matchesProgram = programFilter === "All programs" || story.tag === programFilter;
+        const matchesFormat = formatFilter === "All formats" || story.format === formatFilter;
+        const matchesQuery =
+          !deferredQuery ||
+          `${story.title} ${story.description} ${story.tag}`.toLowerCase().includes(deferredQuery);
+        return matchesProgram && matchesFormat && matchesQuery;
+      }),
+    [deferredQuery, formatFilter, programFilter],
+  );
+  const activeFilters =
+    Number(programFilter !== "All programs") + Number(formatFilter !== "All formats");
+
   return (
     <>
       <PageHero
-        eyebrow="Stories & perspectives"
+        eyebrow="Stories of Impact"
         title={
           <>
-            Human stories, told with <em>dignity.</em>
+            Behind every number, <em>a life.</em>
           </>
         }
-        description="Program stories help people understand a journey without exposing private medical, donor, volunteer or family information."
+        description="A child receiving heart surgery. A student continuing her education. A mother earning her first independent income. These are not statistics — they are lives transformed."
         image="/images/household-relief.jpg"
         imageAlt="A Noel Foundation representative delivering household support during community outreach"
-      />
-      <section className="section">
-        <div className="container-shell stories-layout">
-          <aside className="story-filter" aria-label="Filter stories">
-            <p className="eyebrow">Filter by program</p>
-            {filters.map((item) => (
+      >
+        <a href="#story-collection" className="button button--primary">
+          Explore human stories <Icon name="arrow" />
+        </a>
+      </PageHero>
+      <section className="section story-collection-section" id="story-collection" data-reveal>
+        <div className="container-shell">
+          <div className="story-collection__intro">
+            <SectionHeading
+              eyebrow="Human Stories"
+              title={
+                <>
+                  Behind Every Number Is a <em>Human Story.</em>
+                </>
+              }
+              description="A child receiving heart surgery. A student continuing her education. A mother earning her first independent income. These are not statistics — they are lives transformed."
+            />
+            <div className="collection-index glass-panel">
+              <Icon name="layers" />
+              <span>
+                <strong>{visible.length} perspectives</strong>
+                <small>Consent-aware collection</small>
+              </span>
+            </div>
+          </div>
+
+          <div className="collection-console glass-panel" id="collection-controls">
+            <label className="collection-search">
+              <span className="sr-only">Search story collection</span>
+              <Icon name="search" />
+              <input
+                type="search"
+                placeholder="Search the collection"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <div className="collection-console__actions">
+              <div className="layout-switcher" aria-label="Collection layout">
+                <button
+                  type="button"
+                  className={layout === "mosaic" ? "is-active" : ""}
+                  aria-label="Mosaic layout"
+                  aria-pressed={layout === "mosaic"}
+                  onClick={() => setLayout("mosaic")}
+                >
+                  <Icon name="grid" />
+                </button>
+                <button
+                  type="button"
+                  className={layout === "stack" ? "is-active" : ""}
+                  aria-label="Card stack layout"
+                  aria-pressed={layout === "stack"}
+                  onClick={() => setLayout("stack")}
+                >
+                  <Icon name="layers" />
+                </button>
+              </div>
               <button
-                key={item}
                 type="button"
                 className={
-                  filter === item ? "filter-button filter-button--active" : "filter-button"
+                  settingsOpen ? "filter-trigger filter-trigger--active" : "filter-trigger"
                 }
-                aria-pressed={filter === item}
-                onClick={() => setFilter(item)}
+                aria-expanded={settingsOpen}
+                aria-controls="story-filter-settings"
+                onClick={() => setSettingsOpen((current) => !current)}
               >
-                {item}
-                <span>
-                  {item === "All"
-                    ? programStories.length
-                    : programStories.filter((story) => story.tag === item).length}
-                </span>
+                <Icon name="sliders" /> Filter settings
+                {activeFilters > 0 ? <span>{activeFilters}</span> : null}
               </button>
-            ))}
-            <div className="privacy-note">
-              <Icon name="shield" />
-              <p>
-                <strong>Story privacy</strong>Real names, photographs and medical details require
-                documented consent before publication.
-              </p>
             </div>
-          </aside>
-          <div className="stories-grid" aria-live="polite">
-            {visible.map((story) => (
-              <article key={story.title} className="story-card">
-                <img
-                  src={story.image}
-                  alt={story.imageAlt}
-                  width="900"
-                  height="674"
-                  loading="lazy"
-                />
-                <div>
-                  <p className="eyebrow">{story.tag}</p>
-                  <h2>{story.title}</h2>
-                  <p>{story.description}</p>
-                  <InternalLink href={story.href} navigate={navigate} className="text-link">
-                    Explore the program <Icon name="arrow" />
-                  </InternalLink>
-                </div>
-              </article>
-            ))}
           </div>
+
+          {settingsOpen ? (
+            <aside
+              className="story-filter-settings glass-panel"
+              id="story-filter-settings"
+              aria-label="Story filter settings"
+            >
+              <div className="filter-setting-group">
+                <div>
+                  <p className="eyebrow">Program</p>
+                  <small>Show perspectives from one program area.</small>
+                </div>
+                <div
+                  className="filter-chip-row"
+                  role="group"
+                  aria-label="Filter stories by program"
+                >
+                  {storyPrograms.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={
+                        programFilter === item ? "filter-chip filter-chip--active" : "filter-chip"
+                      }
+                      aria-pressed={programFilter === item}
+                      onClick={() => setProgramFilter(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="filter-setting-group">
+                <div>
+                  <p className="eyebrow">Collection type</p>
+                  <small>Choose narrative perspectives or approved archive images.</small>
+                </div>
+                <div
+                  className="filter-chip-row"
+                  role="group"
+                  aria-label="Filter stories by collection type"
+                >
+                  {["All formats", "Human story", "Field archive"].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={
+                        formatFilter === item ? "filter-chip filter-chip--active" : "filter-chip"
+                      }
+                      aria-pressed={formatFilter === item}
+                      onClick={() => setFormatFilter(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="filter-settings__footer">
+                <div className="privacy-note">
+                  <Icon name="shield" />
+                  <p>
+                    <strong>Story privacy</strong>Names, identifiable photographs and medical
+                    details require documented permission before publication.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={activeFilters === 0 && !query}
+                  onClick={() => {
+                    setProgramFilter("All programs");
+                    setFormatFilter("All formats");
+                    setQuery("");
+                  }}
+                >
+                  Clear all
+                </button>
+              </div>
+            </aside>
+          ) : null}
+
+          <div className="collection-results__head" tabIndex={-1}>
+            <p aria-live="polite">
+              Showing <strong>{visible.length}</strong> of {storyCollectionItems.length}{" "}
+              perspectives
+            </p>
+            <span>{layout === "mosaic" ? "Dynamic mosaic" : "Interactive card stack"}</span>
+          </div>
+
+          {visible.length > 0 ? (
+            <div
+              className={`story-collection story-collection--${layout}`}
+              aria-live="polite"
+              aria-label="Filtered story collection"
+            >
+              {visible.map((story, index) => (
+                <article
+                  key={story.id}
+                  className="collection-card"
+                  style={{ "--card-index": index } as React.CSSProperties}
+                  data-reveal
+                >
+                  <div className="collection-card__media">
+                    <img
+                      src={story.image}
+                      alt={story.imageAlt}
+                      width="900"
+                      height="674"
+                      loading="lazy"
+                    />
+                    <span>{story.format}</span>
+                  </div>
+                  <div className="collection-card__body">
+                    <p className="eyebrow">{story.tag}</p>
+                    <h2>{story.title}</h2>
+                    <p>{story.description}</p>
+                    <InternalLink href={story.href} navigate={navigate} className="text-link">
+                      Explore the program <Icon name="arrow" />
+                    </InternalLink>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="studio-empty-state collection-empty">
+              <span>
+                <Icon name="filter" />
+              </span>
+              <div>
+                <h3>No perspectives match these filters.</h3>
+                <p>Clear a filter or search for another program theme.</p>
+              </div>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => {
+                  setProgramFilter("All programs");
+                  setFormatFilter("All formats");
+                  setQuery("");
+                }}
+              >
+                Reset collection
+              </button>
+            </div>
+          )}
         </div>
       </section>
       <GetInvolved navigate={navigate} />
@@ -2123,9 +2665,8 @@ function CSRBuilder() {
   const next = () => {
     if (step === 1 && !program) return showSelectionError("Choose a program to continue.");
     if (step === 2 && !model) return showSelectionError("Choose a partnership model to continue.");
-    if (step === 3 && !outcome) return showSelectionError("Choose an outcome goal to continue.");
     setErrors({});
-    setStep((current) => Math.min(current + 1, 4));
+    setStep((current) => Math.min(current + 1, 3));
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -2137,6 +2678,7 @@ function CSRBuilder() {
       nextErrors.email = "Please enter a valid email address.";
     if (details.organisation.trim().length < 2)
       nextErrors.organisation = "Please enter your organisation.";
+    if (!outcome) nextErrors.outcome = "Please choose the outcome you want to advance.";
     if (!details.consent) nextErrors.consent = "Consent is required so we can respond.";
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -2172,10 +2714,10 @@ function CSRBuilder() {
   return (
     <div className="csr-builder">
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Partnership builder step {step} of 4
+        Partnership builder step {step} of 3
       </div>
-      <div className="builder-progress" aria-label={`Step ${step} of 4`}>
-        {["Program", "Model", "Outcome", "Details"].map((label, index) => (
+      <div className="builder-progress builder-progress--three" aria-label={`Step ${step} of 3`}>
+        {["Vertical", "Model", "Details"].map((label, index) => (
           <div
             key={label}
             className={
@@ -2193,7 +2735,7 @@ function CSRBuilder() {
         <div className="builder-panel">
           <p className="eyebrow">Step 1</p>
           <h3 id="csr-step-heading" tabIndex={-1}>
-            Choose a program
+            Choose a vertical
           </h3>
           <div
             className="choice-grid choice-grid--three"
@@ -2267,46 +2809,29 @@ function CSRBuilder() {
         </div>
       ) : null}
       {step === 3 ? (
-        <div className="builder-panel">
+        <form className="builder-panel form-grid" onSubmit={handleSubmit} noValidate>
           <p className="eyebrow">Step 3</p>
           <h3 id="csr-step-heading" tabIndex={-1}>
-            Choose the outcome you want to advance
-          </h3>
-          <div
-            className="choice-grid choice-grid--two"
-            role="radiogroup"
-            tabIndex={-1}
-            aria-invalid={Boolean(errors.selection)}
-            aria-labelledby="csr-step-heading"
-            aria-describedby={errors.selection ? "csr-selection-error" : undefined}
-          >
-            {outcomes.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={outcome === item ? "choice-card choice-card--selected" : "choice-card"}
-                role="radio"
-                aria-checked={outcome === item}
-                onClick={() => setOutcome(item)}
-              >
-                <strong>{item}</strong>
-                {outcome === item ? <Icon name="check" /> : null}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {step === 4 ? (
-        <form className="builder-panel form-grid" onSubmit={handleSubmit} noValidate>
-          <p className="eyebrow">Step 4</p>
-          <h3 id="csr-step-heading" tabIndex={-1}>
-            Tell us who to speak with
+            Add partnership details
           </h3>
           <div className="builder-summary">
             <span>{program}</span>
             <span>{model}</span>
-            <span>{outcome}</span>
           </div>
+          <SelectField
+            label="Outcome priority *"
+            name="csr-outcome"
+            value={outcome}
+            onChange={(event) => setOutcome(event.target.value)}
+            error={errors.outcome}
+          >
+            <option value="">Choose an outcome</option>
+            {outcomes.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </SelectField>
           <div className="form-grid__two">
             <TextField
               label="Full name *"
@@ -2401,7 +2926,7 @@ function CSRBuilder() {
           {errors.selection}
         </p>
       ) : null}
-      {step < 4 ? (
+      {step < 3 ? (
         <div className="builder-actions">
           <button
             type="button"
@@ -2422,7 +2947,7 @@ function CSRBuilder() {
         <button
           type="button"
           className="button button--ghost builder-back"
-          onClick={() => setStep(3)}
+          onClick={() => setStep(2)}
         >
           <Icon name="chevron-left" /> Change selections
         </button>
@@ -2441,7 +2966,7 @@ function CSRPage({ navigate }: { navigate: Navigate }) {
             Your CSR. Our community reach. <em>Shared impact.</em>
           </>
         }
-        description="Co-create a focused, human-centred program across children's health, education or women's livelihoods."
+        description="Noel Foundation offers corporates the opportunity to develop focused social-impact partnerships aligned with their CSR priorities."
         image="/images/community-relief.jpg"
         imageAlt="Noel Foundation team members with a community participant during an outreach initiative"
       >
@@ -2474,13 +2999,13 @@ function CSRPage({ navigate }: { navigate: Navigate }) {
       <section className="section section--cream" id="csr-builder">
         <div className="container-shell">
           <SectionHeading
-            eyebrow="Partnership builder"
+            eyebrow="CSR Partnership Builder"
             title={
               <>
-                Shape the first conversation in <em>four simple steps.</em>
+                Design a partnership aligned with your <em>CSR priorities.</em>
               </>
             }
-            description="This is not a pricing calculator. It helps our team understand the program and outcome you want to explore."
+            description="This is an enquiry builder — not a pricing calculator."
             align="center"
           />
           <CSRBuilder />
@@ -2890,9 +3415,17 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
   const [amount, setAmount] = useState<number | "custom" | null>(null);
   const [customAmount, setCustomAmount] = useState("");
   const [cause, setCause] = useState("");
-  const [error, setError] = useState("");
+  const [frequency, setFrequency] = useState<"One Time" | "Monthly">("One Time");
+  const [details, setDetails] = useState({ name: "", email: "", phone: "" });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const effectiveAmount = amount === "custom" ? Number(customAmount) : amount;
   const causes = ["Where Needed Most", "Children's Health", "Education", "Women's Livelihoods"];
+  const amountOptions = [
+    { value: 1000, label: "Critical support" },
+    { value: 5000, label: "Programme support" },
+    { value: 15000, label: "Healthcare support" },
+    { value: 30000, label: "Extended support" },
+  ];
   const previousStep = useRef(step);
 
   useEffect(() => {
@@ -2905,7 +3438,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
   }, [step]);
 
   const showStepError = (message: string) => {
-    setError(message);
+    setErrors({ selection: message });
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLElement>('.donation-step [role="radiogroup"]')?.focus();
     });
@@ -2916,9 +3449,37 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
       return showStepError("Choose or enter a contribution of at least ₹100.");
     if (step === 2 && !cause)
       return showStepError("Choose where you would like your contribution directed.");
-    setError("");
-    setStep((current) => Math.min(current + 1, 3));
+    if (step === 3) {
+      const nextErrors: Record<string, string> = {};
+      if (details.name.trim().length < 2) nextErrors.name = "Please enter your full name.";
+      if (!/^\S+@\S+\.\S+$/.test(details.email))
+        nextErrors.email = "Please enter a valid email address.";
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
+        window.requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>('.donation-step [aria-invalid="true"]')?.focus();
+        });
+        return;
+      }
+    }
+    setErrors({});
+    setStep((current) => Math.min(current + 1, 5));
   };
+
+  const resetDonation = () => {
+    setStep(1);
+    setAmount(null);
+    setCustomAmount("");
+    setCause("");
+    setFrequency("One Time");
+    setDetails({ name: "", email: "", phone: "" });
+    setErrors({});
+  };
+
+  const amountDisplay = new Intl.NumberFormat("en-IN").format(effectiveAmount || 0);
+  const assistanceBody = encodeURIComponent(
+    `Hello Noel Foundation,\n\nI have prepared a ${frequency.toLowerCase()} contribution of ₹${amountDisplay} toward ${cause}.\n\nName: ${details.name}\nEmail: ${details.email}${details.phone ? `\nPhone: ${details.phone}` : ""}\n\nPlease share the approved donation process.\n\nThank you.`,
+  );
 
   return (
     <>
@@ -2929,7 +3490,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
             Help create impact <em>that lasts.</em>
           </>
         }
-        description="Choose a contribution and cause, then continue through Noel Foundation's approved donation process."
+        description="Your contribution supports children's health, education and women's livelihoods across underserved communities."
         image="/images/family-medical-support.jpg"
         imageAlt="A Noel Foundation representative meeting a child and caregiver during a hospital visit"
       />
@@ -2937,16 +3498,18 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
         <div className="container-shell donate-layout">
           <div className="donation-panel">
             <div className="sr-only" aria-live="polite" aria-atomic="true">
-              Donation preparation step {step} of 3
+              Donation preparation step {step} of 5
             </div>
             <div
-              className="donation-progress"
-              aria-label={`Donation preparation step ${step} of 3`}
+              className="donation-progress donation-progress--five"
+              aria-label={`Donation preparation step ${step} of 5`}
             >
               {[
                 ["01", "Contribution"],
                 ["02", "Cause"],
-                ["03", "Secure payment"],
+                ["03", "Details"],
+                ["04", "Payment"],
+                ["05", "Complete"],
               ].map(([number, label], index) => (
                 <div
                   key={label}
@@ -2963,34 +3526,39 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
             </div>
             {step === 1 ? (
               <div className="donation-step">
-                <p className="eyebrow">One-time contribution</p>
+                <p className="eyebrow">Choose your contribution</p>
                 <h2 id="donation-step-heading" tabIndex={-1}>
-                  Choose an amount
+                  Choose your contribution
                 </h2>
                 <div
                   className="amount-grid"
                   role="radiogroup"
                   tabIndex={-1}
-                  aria-invalid={Boolean(error)}
+                  aria-invalid={Boolean(errors.selection)}
                   aria-labelledby="donation-step-heading"
-                  aria-describedby={error ? "donation-step-error" : undefined}
+                  aria-describedby={errors.selection ? "donation-step-error" : undefined}
                 >
-                  {[1000, 5000, 15000, 30000].map((value) => (
+                  {amountOptions.map((option) => (
                     <button
-                      key={value}
+                      key={option.value}
                       type="button"
                       className={
-                        amount === value ? "amount-card amount-card--selected" : "amount-card"
+                        amount === option.value
+                          ? "amount-card amount-card--selected"
+                          : "amount-card"
                       }
                       role="radio"
-                      aria-checked={amount === value}
+                      aria-checked={amount === option.value}
                       onClick={() => {
-                        setAmount(value);
-                        setError("");
+                        setAmount(option.value);
+                        setErrors({});
                       }}
                     >
-                      ₹{new Intl.NumberFormat("en-IN").format(value)}
-                      {amount === value ? <Icon name="check" /> : null}
+                      <span>
+                        <strong>₹{new Intl.NumberFormat("en-IN").format(option.value)}</strong>
+                        <small>{option.label}</small>
+                      </span>
+                      {amount === option.value ? <Icon name="check" /> : null}
                     </button>
                   ))}
                   <button
@@ -3002,10 +3570,14 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                     aria-checked={amount === "custom"}
                     onClick={() => {
                       setAmount("custom");
-                      setError("");
+                      setErrors({});
                     }}
                   >
-                    Custom{amount === "custom" ? <Icon name="check" /> : null}
+                    <span>
+                      <strong>Custom amount</strong>
+                      <small>Enter an amount in ₹</small>
+                    </span>
+                    {amount === "custom" ? <Icon name="check" /> : null}
                   </button>
                 </div>
                 {amount === "custom" ? (
@@ -3019,14 +3591,28 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                     onChange={(event) => setCustomAmount(event.target.value)}
                   />
                 ) : null}
-                <div className="frequency-note">
-                  <div>
-                    <strong>One time</strong>
-                    <small>Selected for this review</small>
+                <div className="frequency-selector">
+                  <p className="field__label">Frequency</p>
+                  <div role="radiogroup" aria-label="Contribution frequency">
+                    {(["One Time", "Monthly"] as const).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        role="radio"
+                        aria-checked={frequency === item}
+                        className={frequency === item ? "is-active" : ""}
+                        onClick={() => setFrequency(item)}
+                      >
+                        {item}
+                      </button>
+                    ))}
                   </div>
-                  <button type="button" disabled aria-disabled="true">
-                    Monthly <span>Available after recurring mandate approval</span>
-                  </button>
+                  {frequency === "Monthly" ? (
+                    <small>
+                      Recurring support is subject to availability and approval on the payment
+                      provider.
+                    </small>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -3040,9 +3626,9 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   className="donation-cause-grid"
                   role="radiogroup"
                   tabIndex={-1}
-                  aria-invalid={Boolean(error)}
+                  aria-invalid={Boolean(errors.selection)}
                   aria-labelledby="donation-step-heading"
-                  aria-describedby={error ? "donation-step-error" : undefined}
+                  aria-describedby={errors.selection ? "donation-step-error" : undefined}
                 >
                   {causes.map((item) => (
                     <button
@@ -3057,7 +3643,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                       aria-checked={cause === item}
                       onClick={() => {
                         setCause(item);
-                        setError("");
+                        setErrors({});
                       }}
                     >
                       <Icon
@@ -3086,15 +3672,61 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
               </div>
             ) : null}
             {step === 3 ? (
-              <div className="donation-step">
-                <p className="eyebrow">Secure payment hand-off</p>
+              <div className="donation-step form-grid">
+                <p className="eyebrow">Your details</p>
                 <h2 id="donation-step-heading" tabIndex={-1}>
-                  Review your selection
+                  Add contact details
+                </h2>
+                <p className="donation-step__lead">
+                  These details remain in this browser unless you explicitly continue by email.
+                  Payment details are never collected here.
+                </p>
+                <div className="form-grid__two">
+                  <TextField
+                    label="Full name *"
+                    name="donor-name"
+                    autoComplete="name"
+                    value={details.name}
+                    onChange={(event) => setDetails({ ...details, name: event.target.value })}
+                    error={errors.name}
+                  />
+                  <TextField
+                    label="Email *"
+                    name="donor-email"
+                    type="email"
+                    autoComplete="email"
+                    value={details.email}
+                    onChange={(event) => setDetails({ ...details, email: event.target.value })}
+                    error={errors.email}
+                  />
+                </div>
+                <TextField
+                  label="Phone (optional)"
+                  name="donor-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={details.phone}
+                  onChange={(event) => setDetails({ ...details, phone: event.target.value })}
+                />
+                <div className="secure-note secure-note--compact">
+                  <Icon name="shield" />
+                  <p>
+                    <strong>Privacy-aware preparation.</strong>No card, bank, UPI or identity
+                    document details are requested on this website.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+            {step === 4 ? (
+              <div className="donation-step">
+                <p className="eyebrow">Payment</p>
+                <h2 id="donation-step-heading" tabIndex={-1}>
+                  Review and continue securely
                 </h2>
                 <div className="donation-review">
                   <div>
                     <small>Contribution</small>
-                    <strong>₹{new Intl.NumberFormat("en-IN").format(effectiveAmount || 0)}</strong>
+                    <strong>₹{amountDisplay}</strong>
                   </div>
                   <div>
                     <small>Cause</small>
@@ -3102,16 +3734,19 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   </div>
                   <div>
                     <small>Frequency</small>
-                    <strong>One time</strong>
+                    <strong>{frequency}</strong>
+                  </div>
+                  <div>
+                    <small>Prepared for</small>
+                    <strong>{details.name}</strong>
                   </div>
                 </div>
                 <div className="secure-note">
                   <Icon name="shield" />
                   <p>
                     <strong>No payment details are collected or transmitted from this page.</strong>
-                    This review helps you prepare. The approved payment provider will ask you to
-                    enter or confirm the contribution details. A contribution is counted only after
-                    payment confirmation.
+                    The approved provider will ask you to enter or confirm payment details. A
+                    contribution is counted only after provider confirmation.
                   </p>
                 </div>
                 {DONATION_URL ? (
@@ -3131,7 +3766,7 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                       share the approved contribution process.
                     </p>
                     <a
-                      href={`mailto:${contact.email}?subject=${encodeURIComponent("Donation support")}&body=${encodeURIComponent(`Hello Noel Foundation,\n\nI would like to contribute ₹${new Intl.NumberFormat("en-IN").format(effectiveAmount || 0)} toward ${cause}. Please share the approved donation process.\n\nThank you.`)}`}
+                      href={`mailto:${contact.email}?subject=${encodeURIComponent("Donation support")}&body=${assistanceBody}`}
                       className="button button--primary button--large button--wide"
                     >
                       Request donation assistance <Icon name="mail" />
@@ -3147,18 +3782,62 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                 </p>
               </div>
             ) : null}
-            {error ? (
+            {step === 5 ? (
+              <div className="donation-step donation-complete" role="status">
+                <span className="donation-complete__icon">
+                  <Icon name="check" />
+                </span>
+                <p className="eyebrow">Complete</p>
+                <h2 id="donation-step-heading" tabIndex={-1}>
+                  Your preparation is complete.
+                </h2>
+                <p>
+                  This is not a payment confirmation. Your contribution is complete only when the
+                  approved payment provider issues confirmation.
+                </p>
+                <div className="donation-review donation-review--complete">
+                  <div>
+                    <small>Amount</small>
+                    <strong>₹{amountDisplay}</strong>
+                  </div>
+                  <div>
+                    <small>Cause</small>
+                    <strong>{cause}</strong>
+                  </div>
+                  <div>
+                    <small>Frequency</small>
+                    <strong>{frequency}</strong>
+                  </div>
+                </div>
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    onClick={resetDonation}
+                  >
+                    Prepare another contribution
+                  </button>
+                  <InternalLink href="/contact" navigate={navigate} className="button button--dark">
+                    Contact the team <Icon name="arrow" />
+                  </InternalLink>
+                </div>
+              </div>
+            ) : null}
+            {errors.selection ? (
               <p className="builder-error" id="donation-step-error" role="alert">
-                {error}
+                {errors.selection}
               </p>
             ) : null}
-            {step < 3 ? (
+            {step < 4 ? (
               <div className="builder-actions">
                 <button
                   type="button"
                   className="button button--ghost"
                   disabled={step === 1}
-                  onClick={() => setStep((current) => Math.max(current - 1, 1))}
+                  onClick={() => {
+                    setErrors({});
+                    setStep((current) => Math.max(current - 1, 1));
+                  }}
                 >
                   <Icon name="chevron-left" /> Back
                 </button>
@@ -3166,15 +3845,16 @@ function DonatePage({ navigate }: { navigate: Navigate }) {
                   Continue <Icon name="arrow" />
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                className="button button--ghost builder-back"
-                onClick={() => setStep(2)}
-              >
-                <Icon name="chevron-left" /> Change selection
-              </button>
-            )}
+            ) : step === 4 ? (
+              <div className="builder-actions builder-actions--payment">
+                <button type="button" className="button button--ghost" onClick={() => setStep(3)}>
+                  <Icon name="chevron-left" /> Back
+                </button>
+                <button type="button" className="button button--dark" onClick={() => setStep(5)}>
+                  Finish preparation <Icon name="check" />
+                </button>
+              </div>
+            ) : null}
           </div>
           <aside className="donation-aside">
             <p className="eyebrow">Contribution ethics</p>
@@ -3691,23 +4371,199 @@ function Footer({ navigate }: { navigate: Navigate }) {
   );
 }
 
-function FloatingActions({ navigate }: { navigate: Navigate }) {
-  const visible = useScrolled(640);
+function LoadingScreen({ visible }: { visible: boolean }) {
+  if (!visible) return null;
   return (
-    <div className={visible ? "floating-actions floating-actions--visible" : "floating-actions"}>
-      <InternalLink href="/donate" navigate={navigate} className="floating-donate">
-        <Icon name="heart" />
-        <span>Donate</span>
-      </InternalLink>
-      <button
-        type="button"
-        className="back-to-top"
-        aria-label="Back to top"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      >
-        <Icon name="chevron-down" />
-      </button>
+    <div className="loading-screen" role="status" aria-label="Loading Noel Foundation">
+      <div className="loading-screen__halo" aria-hidden="true" />
+      <div className="loading-screen__brand">
+        <Logo inverse />
+        <div className="loading-screen__orbit" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <p>Human first. Impact driven.</p>
+      </div>
+      <div className="loading-screen__track" aria-hidden="true">
+        <span />
+      </div>
     </div>
+  );
+}
+
+function ExperienceDock({
+  path,
+  navigate,
+  motionEnabled,
+  onToggleMotion,
+  glassEnabled,
+  onToggleGlass,
+}: {
+  path: string;
+  navigate: Navigate;
+  motionEnabled: boolean;
+  onToggleMotion: () => void;
+  glassEnabled: boolean;
+  onToggleGlass: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const visible = useScrolled(240);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dockLinks: { label: string; shortLabel: string; href: string; icon: IconName }[] = [
+    { label: "Home", shortLabel: "Home", href: "/", icon: "home" },
+    { label: "Programs", shortLabel: "Programs", href: "/programs", icon: "layers" },
+    { label: "Impact Studio", shortLabel: "Impact", href: "/impact/studio", icon: "analytics" },
+    { label: "Story Collections", shortLabel: "Stories", href: "/stories", icon: "grid" },
+    { label: "Donate", shortLabel: "Donate", href: "/donate", icon: "heart" },
+  ];
+
+  useEffect(() => setOpen(false), [path]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  const isCurrent = (href: string) =>
+    href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
+
+  return (
+    <>
+      <div className={visible ? "experience-dock experience-dock--visible" : "experience-dock"}>
+        <nav aria-label="Quick navigation">
+          {dockLinks.map((item) => (
+            <InternalLink
+              key={item.href}
+              href={item.href}
+              navigate={navigate}
+              className={isCurrent(item.href) ? "dock-link dock-link--active" : "dock-link"}
+              aria-current={isCurrent(item.href) ? "page" : undefined}
+              data-label={item.label}
+            >
+              <Icon name={item.icon} />
+              <span>{item.shortLabel}</span>
+            </InternalLink>
+          ))}
+          <button
+            ref={triggerRef}
+            type="button"
+            className={
+              open ? "dock-link dock-link--active dock-settings" : "dock-link dock-settings"
+            }
+            aria-label="Open experience settings"
+            aria-expanded={open}
+            aria-controls="experience-settings"
+            data-label="Experience settings"
+            onClick={() => setOpen((current) => !current)}
+          >
+            <Icon name="settings" />
+            <span>More</span>
+          </button>
+        </nav>
+      </div>
+
+      {open ? (
+        <aside
+          className="experience-panel glass-panel"
+          id="experience-settings"
+          aria-label="Experience settings"
+        >
+          <header>
+            <div>
+              <p className="eyebrow">Experience console</p>
+              <h2>Explore your way.</h2>
+            </div>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Close experience settings"
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="close" />
+            </button>
+          </header>
+          <div className="experience-panel__toggles">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={motionEnabled}
+              onClick={onToggleMotion}
+            >
+              <span>
+                <Icon name={motionEnabled ? "spark" : "pause"} />
+              </span>
+              <span>
+                <strong>Motion</strong>
+                <small>{motionEnabled ? "Scroll reveals enabled" : "Animations paused"}</small>
+              </span>
+              <i aria-hidden="true">
+                <span />
+              </i>
+            </button>
+            <button type="button" role="switch" aria-checked={glassEnabled} onClick={onToggleGlass}>
+              <span>
+                <Icon name="layers" />
+              </span>
+              <span>
+                <strong>Glass effects</strong>
+                <small>{glassEnabled ? "Depth and blur enabled" : "Solid surfaces enabled"}</small>
+              </span>
+              <i aria-hidden="true">
+                <span />
+              </i>
+            </button>
+          </div>
+          <nav aria-label="Experience shortcuts">
+            <InternalLink href="/impact/studio" navigate={navigate}>
+              <span>
+                <Icon name="analytics" />
+                <strong>Impact Studio</strong>
+              </span>
+              <Icon name="arrow" />
+            </InternalLink>
+            <InternalLink href="/stories#collection-controls" navigate={navigate}>
+              <span>
+                <Icon name="filter" />
+                <strong>Story filters</strong>
+              </span>
+              <Icon name="arrow" />
+            </InternalLink>
+            <InternalLink href="/csr#csr-builder" navigate={navigate}>
+              <span>
+                <Icon name="link" />
+                <strong>CSR builder</strong>
+              </span>
+              <Icon name="arrow" />
+            </InternalLink>
+            <InternalLink href="/donate" navigate={navigate}>
+              <span>
+                <Icon name="wallet" />
+                <strong>Donation flow</strong>
+              </span>
+              <Icon name="arrow" />
+            </InternalLink>
+          </nav>
+          <button
+            type="button"
+            className="experience-panel__top"
+            onClick={() => {
+              const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+              setOpen(false);
+            }}
+          >
+            Back to top <Icon name="chevron-down" />
+          </button>
+        </aside>
+      ) : null}
+    </>
   );
 }
 
@@ -3724,7 +4580,7 @@ function AppRoutes({ path, navigate }: { path: string; navigate: Navigate }) {
     ].includes(path)
   )
     return <ProgramsPage path={path} navigate={navigate} />;
-  if (path === "/impact" || path === "/impact/live")
+  if (path === "/impact" || path === "/impact/live" || path === "/impact/studio")
     return <ImpactPage path={path} navigate={navigate} />;
   if (path === "/stories") return <StoriesPage navigate={navigate} />;
   if (path === "/events") return <EventsPage navigate={navigate} />;
@@ -3740,8 +4596,68 @@ function AppRoutes({ path, navigate }: { path: string; navigate: Navigate }) {
 }
 
 export default function App() {
-  const { path, navigate } = useNavigation();
+  const { path, navigate, routeBusy } = useNavigation();
   const initialPath = useRef(true);
+  const revealObserver = useRef<IntersectionObserver | null>(null);
+  const [booting, setBooting] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+    return window.localStorage.getItem("noel-motion") !== "off";
+  });
+  const [glassEnabled, setGlassEnabled] = useState(
+    () => window.localStorage.getItem("noel-glass") !== "off",
+  );
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => setBooting(false), reducedMotion ? 120 : 880);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.motion = motionEnabled ? "on" : "off";
+    window.localStorage.setItem("noel-motion", motionEnabled ? "on" : "off");
+  }, [motionEnabled]);
+
+  useEffect(() => {
+    document.documentElement.dataset.glass = glassEnabled ? "on" : "off";
+    window.localStorage.setItem("noel-glass", glassEnabled ? "on" : "off");
+  }, [glassEnabled]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const nodes = Array.from(
+        new Set(
+          document.querySelectorAll<HTMLElement>(
+            "#main-content .section-heading, #main-content .page-hero__copy, #main-content [data-reveal]",
+          ),
+        ),
+      );
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      nodes.forEach((node) => node.classList.add("reveal-target"));
+      if (!motionEnabled || reducedMotion || !("IntersectionObserver" in window)) {
+        nodes.forEach((node) => node.classList.add("is-revealed"));
+        return;
+      }
+
+      nodes.forEach((node) => node.classList.remove("is-revealed"));
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            entry.target.classList.toggle("is-revealed", entry.isIntersecting);
+          });
+        },
+        { threshold: 0.08, rootMargin: "4% 0px -8% 0px" },
+      );
+      nodes.forEach((node) => observer.observe(node));
+      revealObserver.current = observer;
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      revealObserver.current?.disconnect();
+      revealObserver.current = null;
+    };
+  }, [motionEnabled, path]);
 
   useEffect(() => {
     if (initialPath.current) {
@@ -3756,6 +4672,15 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <LoadingScreen visible={booting} />
+      <div
+        className={routeBusy ? "route-progress route-progress--active" : "route-progress"}
+        role="progressbar"
+        aria-label="Loading page"
+        aria-hidden={!routeBusy}
+      >
+        <span />
+      </div>
       <a href="#main-content" className="skip-link">
         Skip to main content
       </a>
@@ -3767,7 +4692,14 @@ export default function App() {
         <AppRoutes path={path} navigate={navigate} />
       </main>
       <Footer navigate={navigate} />
-      <FloatingActions navigate={navigate} />
+      <ExperienceDock
+        path={path}
+        navigate={navigate}
+        motionEnabled={motionEnabled}
+        onToggleMotion={() => setMotionEnabled((current) => !current)}
+        glassEnabled={glassEnabled}
+        onToggleGlass={() => setGlassEnabled((current) => !current)}
+      />
     </div>
   );
 }

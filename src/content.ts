@@ -190,23 +190,23 @@ export const values = [
 export const partnershipModels = [
   {
     title: "Program Sponsorship",
-    description: "Support a defined health, education or livelihoods program.",
+    description: "Fund an entire project or program end-to-end.",
   },
   {
     title: "Beneficiary Sponsorship",
-    description: "Fund a clearly scoped pathway for an eligible beneficiary.",
+    description: "Support identified children, students or women.",
   },
   {
     title: "Project Partnership",
-    description: "Co-design a project around an agreed community need and outcome.",
+    description: "Co-create and implement a customized CSR initiative.",
   },
   {
     title: "Employee Engagement",
-    description: "Create structured volunteering and skills-based participation.",
+    description: "Connect employees with volunteering and community engagement.",
   },
   {
     title: "Strategic Partnership",
-    description: "Build a multi-year program with shared measurement and reporting.",
+    description: "Build multi-year programs with measurable outcomes.",
   },
 ];
 
