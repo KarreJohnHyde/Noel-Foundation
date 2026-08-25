@@ -11,6 +11,7 @@ export type IconName =
   | "chevron-right"
   | "close"
   | "compass"
+  | "cross"
   | "download"
   | "external"
   | "filter"
@@ -57,6 +58,7 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="m15.2 8.8-2 4.4-4.4 2 2-4.4 4.4-2Z" />
     </>
   ),
+  cross: <path d="M10 3h4v6h5v4h-5v8h-4v-8H5V9h5V3Z" />,
   download: <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14" />,
   external: <path d="M14 5h5v5m0-5-9 9M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />,
   filter: <path d="M4 5h16l-6.3 7.2V19l-3.4 1.8v-8.6L4 5Z" />,

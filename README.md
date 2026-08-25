@@ -5,9 +5,12 @@ A responsive, donor-facing website for Noel Foundation, built with React 19, Vit
 ## Experience highlights
 
 - Responsive layouts for phones, tablets, laptops and wide desktop screens
-- Glass navigation dock with motion and transparency preferences
-- Filterable story collections with dynamic mosaic and accessible card-stack layouts
-- Evidence-safe interactive impact studio with verified-record coverage views
+- Faith & Mission journey with a need-led, non-coercive service covenant and faith-community partnership path
+- Sourced public endorsements and institutional reflections, clearly separated from beneficiary testimony and impact evidence
+- Audience pathways for companies, foundations, churches, individual donors, volunteers and supporters
+- Minimal glass navigation dock with motion and transparency preferences
+- Filterable program perspectives with dynamic mosaic and accessible card-stack layouts
+- Evidence-safe verified impact dashboard with public-record coverage views
 - Three-step CSR partnership builder and five-step donation preparation flow
 - Keyboard-friendly navigation, visible focus, semantic forms and reduced-motion support
 - Donor and CSR journeys that avoid unverified impact claims or fabricated urgency
@@ -71,6 +74,8 @@ The migration explicitly grants access and enables RLS on every public-schema ta
 ## Content and operations
 
 Program copy and public contact details live in `src/content.ts`. Public impact numbers are intentionally blank until verified records are published in `impact_metrics`. Donation reconciliation and tax/compliance statements must be approved by Noel Foundation before being shown as confirmed facts.
+
+Faith identity wording, safeguarding commitments and historical endorsement excerpts should receive leadership review before a production release. Published voices link to their existing official source. New beneficiary testimonies require documented consent, fact review, guardian approval for minors, publication approval and a withdrawal workflow; the site does not expose a public auto-publish form.
 
 The typography stack supports the local family names `Ways` and `Gwen`, but their commercial font files are not included. Keep the current Manrope and Newsreader web fallbacks until properly licensed vendor WOFF2 packages and web-embedding rights are supplied. Do not convert or publish desktop font files without that licence.
 

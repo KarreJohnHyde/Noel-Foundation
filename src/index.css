@@ -622,6 +622,7 @@ h2 em {
 .nav-link:hover,
 .desktop-menu > summary:hover,
 .nav-link--active,
+.desktop-menu--active > summary,
 .desktop-menu[open] > summary {
   background: var(--orange-soft);
   color: var(--orange-deep);
@@ -4500,6 +4501,736 @@ textarea.field__control {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Published voices, audience pathways and faith pages                         */
+/* -------------------------------------------------------------------------- */
+
+.published-voices {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(249, 178, 0, 0.11), transparent 26rem),
+    linear-gradient(180deg, #f7f3ed, #fffdf9);
+}
+
+.published-voices--expanded {
+  background: var(--warm-white);
+}
+
+.published-voices__shell {
+  align-items: stretch;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+}
+
+.published-voices__intro {
+  align-self: center;
+  padding-right: clamp(16px, 4vw, 58px);
+}
+
+.published-voices__intro h2,
+.audience-pathways__intro h2 {
+  font-size: clamp(3rem, 5vw, 5.5rem);
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+  margin: 16px 0 22px;
+}
+
+.published-voices__intro h2 em,
+.audience-pathways__intro h2 em {
+  color: var(--orange-deep);
+  display: block;
+  font-weight: inherit;
+}
+
+.published-voices__intro > p:not(.eyebrow),
+.audience-pathways__intro > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.published-voices__intro .text-link {
+  margin-top: 25px;
+}
+
+.voice-stage {
+  background:
+    radial-gradient(circle at 88% 5%, rgba(249, 178, 0, 0.25), transparent 16rem),
+    linear-gradient(145deg, #15130f, #1b1712 62%, #132151 135%);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 34px;
+  color: white;
+  min-height: 490px;
+  overflow: hidden;
+  padding: clamp(28px, 5vw, 60px);
+  position: relative;
+}
+
+.voice-stage::after {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  content: "";
+  height: 270px;
+  position: absolute;
+  right: -105px;
+  top: -105px;
+  width: 270px;
+}
+
+.voice-stage__mark {
+  align-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  border-radius: 17px;
+  color: #21170c;
+  display: flex;
+  height: 54px;
+  justify-content: center;
+  width: 54px;
+}
+
+.voice-stage__mark svg {
+  height: 25px;
+  width: 25px;
+}
+
+.voice-stage__kind {
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.15em;
+  margin: 34px 0 18px;
+  text-transform: uppercase;
+}
+
+.voice-stage blockquote {
+  font-family: var(--font-gwen);
+  font-size: clamp(2.2rem, 4.5vw, 4.85rem);
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  margin: 0;
+  max-width: 930px;
+}
+
+.voice-stage__attribution {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-top: 38px;
+}
+
+.voice-stage__attribution > span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  color: var(--gold);
+  display: flex;
+  font-family: var(--font-gwen);
+  font-size: 1.4rem;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.voice-stage__attribution strong,
+.voice-stage__attribution small {
+  display: block;
+}
+
+.voice-stage__attribution strong {
+  font-size: 0.88rem;
+}
+
+.voice-stage__attribution small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.voice-stage__source {
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 750;
+  gap: 8px;
+  margin-top: 30px;
+  padding-top: 18px;
+  width: fit-content;
+}
+
+.voice-stage__source:hover {
+  color: white;
+}
+
+.voice-stage__source svg {
+  height: 15px;
+  width: 15px;
+}
+
+.voice-tabs {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 4px;
+}
+
+.voice-tab {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(94, 72, 51, 0.12);
+  border-radius: 18px;
+  color: var(--ink);
+  display: grid;
+  gap: 13px;
+  grid-template-columns: auto 1fr auto;
+  min-height: 82px;
+  padding: 14px 16px;
+  text-align: left;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms var(--ease);
+}
+
+.voice-tab:hover {
+  background: white;
+  transform: translateY(-2px);
+}
+
+.voice-tab--active {
+  background: white;
+  border-color: rgba(246, 122, 31, 0.45);
+  box-shadow: 0 12px 30px rgba(46, 31, 17, 0.08);
+}
+
+.voice-tab > span:first-child {
+  color: var(--orange-deep);
+  font-size: 0.69rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.voice-tab strong,
+.voice-tab small {
+  display: block;
+}
+
+.voice-tab strong {
+  font-size: 0.78rem;
+}
+
+.voice-tab small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  margin-top: 3px;
+}
+
+.voice-tab > svg {
+  color: var(--orange-deep);
+  height: 17px;
+  width: 17px;
+}
+
+.audience-pathways {
+  background:
+    radial-gradient(circle at 75% 24%, rgba(249, 178, 0, 0.16), transparent 27rem),
+    linear-gradient(135deg, #f6f1e9, #fffdf9 58%, #f2e7d5);
+}
+
+.audience-pathways__grid {
+  align-items: stretch;
+  display: grid;
+  gap: clamp(35px, 7vw, 100px);
+  grid-template-columns: minmax(0, 0.92fr) minmax(380px, 0.78fr);
+}
+
+.audience-tabs {
+  display: grid;
+  gap: 8px;
+  margin-top: 34px;
+}
+
+.audience-tabs button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(94, 72, 51, 0.12);
+  border-radius: 15px;
+  color: var(--ink);
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 750;
+  gap: 12px;
+  min-height: 54px;
+  padding: 10px 14px;
+  text-align: left;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms var(--ease);
+}
+
+.audience-tabs button:hover {
+  background: white;
+  transform: translateX(4px);
+}
+
+.audience-tabs button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+
+.audience-tabs svg {
+  color: var(--orange);
+  height: 20px;
+  width: 20px;
+}
+
+.pathway-stage {
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 34px;
+  box-shadow: 0 30px 90px rgba(46, 31, 17, 0.13);
+  min-height: 590px;
+  padding: clamp(28px, 4vw, 52px);
+}
+
+.pathway-stage__top {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: flex-start;
+}
+
+.pathway-stage__top > span {
+  align-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  border-radius: 18px;
+  display: flex;
+  height: 60px;
+  justify-content: center;
+  width: 60px;
+}
+
+.pathway-stage__top svg {
+  height: 27px;
+  width: 27px;
+}
+
+.pathway-stage__top small {
+  color: var(--orange-deep);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pathway-stage h3 {
+  font-family: var(--font-gwen);
+  font-size: clamp(2.6rem, 4vw, 4.4rem);
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  margin: 64px 0 20px;
+}
+
+.pathway-stage > p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.72;
+}
+
+.pathway-assurances {
+  border-block: 1px solid var(--line);
+  display: grid;
+  gap: 11px;
+  margin: 30px 0;
+  padding-block: 22px;
+}
+
+.pathway-assurances span {
+  align-items: center;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 700;
+  gap: 9px;
+}
+
+.pathway-assurances svg {
+  color: var(--green);
+  height: 17px;
+  width: 17px;
+}
+
+.faith-covenant {
+  background:
+    radial-gradient(circle at 8% 14%, rgba(243, 129, 32, 0.08), transparent 24%), var(--warm-white);
+}
+
+.faith-covenant__heading {
+  align-items: end;
+  display: grid;
+  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 0.55fr);
+}
+
+.faith-covenant__heading .section-heading {
+  margin: 0;
+}
+
+.faith-covenant__principle {
+  align-items: flex-start;
+  border-radius: 22px;
+  display: flex;
+  gap: 14px;
+  padding: 20px;
+}
+
+.faith-covenant__principle > svg {
+  color: var(--orange-deep);
+  flex: 0 0 auto;
+  height: 25px;
+  width: 25px;
+}
+
+.faith-covenant__principle p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.faith-covenant__principle strong {
+  color: var(--ink);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.faith-covenant__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 48px;
+}
+
+.faith-covenant__grid article {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  min-height: 330px;
+  padding: 26px;
+  position: relative;
+}
+
+.faith-covenant__grid article > span {
+  color: var(--orange-deep);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.faith-covenant__grid article > svg {
+  color: var(--orange-deep);
+  display: block;
+  height: 34px;
+  margin: 72px 0 24px;
+  width: 34px;
+}
+
+.faith-covenant__grid h2 {
+  font-family: var(--font-gwen);
+  font-size: 2rem;
+  margin: 0 0 8px;
+}
+
+.faith-covenant__grid p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.62;
+}
+
+.faith-source {
+  background:
+    radial-gradient(circle at 78% 0%, rgba(249, 178, 0, 0.22), transparent 25rem),
+    linear-gradient(135deg, #11100f, #17130f 65%, #12245b 140%);
+  color: white;
+}
+
+.faith-source__grid {
+  align-items: center;
+  display: grid;
+  gap: clamp(40px, 8vw, 120px);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+}
+
+.faith-source blockquote {
+  font-family: var(--font-gwen);
+  font-size: clamp(3rem, 6vw, 6.5rem);
+  letter-spacing: -0.045em;
+  line-height: 0.96;
+  margin: 22px 0 28px;
+}
+
+.faith-source__grid > div > p:last-child {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.75rem;
+}
+
+.faith-source__link {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 24px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto 1fr auto;
+  min-height: 126px;
+  padding: 20px;
+}
+
+.faith-source__link > span:first-child {
+  align-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  border-radius: 14px;
+  color: #21170c;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.faith-source__link strong,
+.faith-source__link small {
+  display: block;
+}
+
+.faith-source__link small {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.faith-source__link svg {
+  height: 19px;
+  width: 19px;
+}
+
+.faith-partners__grid {
+  align-items: start;
+  display: grid;
+  gap: clamp(40px, 8vw, 120px);
+  grid-template-columns: minmax(0, 0.9fr) minmax(390px, 0.82fr);
+}
+
+.faith-partner-list {
+  display: grid;
+}
+
+.faith-partner-list article {
+  align-items: flex-start;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 36px 1fr;
+  padding: 22px 0;
+}
+
+.faith-partner-list article > span {
+  color: var(--orange-deep);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.faith-partner-list h3 {
+  font-size: 1rem;
+  margin: 0 0 5px;
+}
+
+.faith-partner-list p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.faith-partner-list .button {
+  margin-top: 14px;
+  width: fit-content;
+}
+
+.testimony-standards__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 48px;
+}
+
+.testimony-standards__grid article {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 25px;
+  min-height: 260px;
+  padding: 27px;
+}
+
+.testimony-standards__grid article > span {
+  align-items: center;
+  background: var(--orange-soft);
+  border-radius: 15px;
+  color: var(--orange-deep);
+  display: flex;
+  height: 50px;
+  justify-content: center;
+  width: 50px;
+}
+
+.testimony-standards__grid svg {
+  height: 23px;
+  width: 23px;
+}
+
+.testimony-standards__grid h2 {
+  font-family: var(--font-gwen);
+  font-size: 1.8rem;
+  margin: 48px 0 9px;
+}
+
+.testimony-standards__grid p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.testimony-standards__note {
+  align-items: flex-start;
+  background: #fff9ef;
+  border: 1px solid #f0dbc3;
+  border-radius: 18px;
+  display: flex;
+  gap: 13px;
+  margin-top: 16px;
+  padding: 18px;
+}
+
+.testimony-standards__note > svg {
+  color: var(--orange-deep);
+  flex: 0 0 auto;
+  height: 22px;
+  width: 22px;
+}
+
+.testimony-standards__note p {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.testimony-standards__note strong {
+  color: var(--ink);
+  display: block;
+}
+
+.involved-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .published-voices__shell,
+  .audience-pathways__grid,
+  .faith-source__grid,
+  .faith-partners__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .published-voices__intro {
+    max-width: 780px;
+    padding-right: 0;
+  }
+
+  .faith-covenant__grid,
+  .involved-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pathway-stage {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 820px) {
+  .published-voices__shell,
+  .faith-covenant__heading {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-tabs,
+  .testimony-standards__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-stage {
+    min-height: 440px;
+  }
+}
+
+@media (max-width: 620px) {
+  .published-voices__intro h2,
+  .audience-pathways__intro h2 {
+    font-size: clamp(2.8rem, 14vw, 4.2rem);
+  }
+
+  .voice-stage,
+  .pathway-stage {
+    border-radius: 24px;
+    padding: 24px;
+  }
+
+  .voice-stage blockquote {
+    font-size: clamp(2.25rem, 12vw, 3.6rem);
+  }
+
+  .voice-stage__attribution {
+    align-items: flex-start;
+  }
+
+  .pathway-stage h3 {
+    margin-top: 46px;
+  }
+
+  .faith-covenant__grid,
+  .involved-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faith-covenant__grid article {
+    min-height: 275px;
+  }
+
+  .faith-source blockquote {
+    font-size: clamp(2.8rem, 15vw, 4.6rem);
+  }
+
+  .faith-source__link {
+    grid-template-columns: auto 1fr;
+  }
+
+  .faith-source__link > svg {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-tab:hover,
+  .audience-tabs button:hover {
+    transform: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* 2026 interactive experience system                                         */
 /* Ways and Gwen are licensed commercial families. Their local names are      */
 /* first in the stack; production-safe web fallbacks remain bundled remotely. */
@@ -6522,6 +7253,225 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Faith in action                                                            */
+/* -------------------------------------------------------------------------- */
+
+.faith-in-action {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(249, 178, 0, 0.2), transparent 26rem),
+    linear-gradient(135deg, #11100f 0%, #17130f 48%, #14255f 130%);
+  color: white;
+  isolation: isolate;
+  overflow: hidden;
+  position: relative;
+}
+
+.faith-in-action::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 74px 74px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  pointer-events: none;
+  position: absolute;
+}
+
+.faith-in-action__glow {
+  background: linear-gradient(135deg, var(--gold), var(--orange), var(--red));
+  border-radius: 50%;
+  filter: blur(80px);
+  height: 210px;
+  opacity: 0.14;
+  position: absolute;
+  right: 5%;
+  top: 3%;
+  width: 210px;
+}
+
+.faith-in-action__layout {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  position: relative;
+  z-index: 1;
+}
+
+.faith-in-action__copy {
+  max-width: 770px;
+}
+
+.faith-in-action__copy h2 {
+  font-size: clamp(3.3rem, 6vw, 6.6rem);
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+  margin: 18px 0 28px;
+}
+
+.faith-in-action__copy h2 em {
+  background: linear-gradient(95deg, var(--gold), #ff8a24 58%, #ff5145);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: block;
+  font-weight: inherit;
+}
+
+.faith-in-action__copy > p:not(.eyebrow) {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(1rem, 1.45vw, 1.23rem);
+  line-height: 1.8;
+  max-width: 690px;
+}
+
+.faith-in-action__copy .button-row {
+  margin-top: 34px;
+}
+
+.button--faith-outline {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: white;
+}
+
+.button--faith-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.56);
+}
+
+.faith-in-action__verse {
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 32px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 390px;
+  padding: 34px;
+}
+
+html[data-glass="on"] .faith-in-action__verse {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.faith-in-action__cross {
+  align-items: center;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  border-radius: 18px;
+  color: #21170c;
+  display: inline-flex;
+  height: 58px;
+  justify-content: center;
+  width: 58px;
+}
+
+.faith-in-action__cross svg {
+  height: 28px;
+  width: 28px;
+}
+
+.faith-in-action__verse blockquote {
+  font-family: var(--font-gwen);
+  font-size: clamp(2rem, 3vw, 3.35rem);
+  line-height: 1.04;
+  margin: 32px 0 18px;
+}
+
+.faith-in-action__verse cite {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.faith-in-action__verse small {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.55;
+  margin-top: 26px;
+  padding-top: 20px;
+}
+
+.faith-practices {
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.faith-practices article {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 22px;
+  display: flex;
+  gap: 16px;
+  padding: 22px;
+}
+
+.faith-practices article > span {
+  align-items: center;
+  background: rgba(249, 178, 0, 0.13);
+  border: 1px solid rgba(249, 178, 0, 0.23);
+  border-radius: 13px;
+  color: var(--gold);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.faith-practices svg {
+  height: 21px;
+  width: 21px;
+}
+
+.faith-practices h3 {
+  font-size: 1rem;
+  margin: 1px 0 7px;
+}
+
+.faith-practices p {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.83rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .faith-in-action__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .faith-in-action__verse {
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 700px) {
+  .faith-in-action__copy h2 {
+    font-size: clamp(3rem, 15vw, 4.75rem);
+  }
+
+  .faith-in-action__verse {
+    border-radius: 24px;
+    min-height: 300px;
+    padding: 26px;
+  }
+
+  .faith-practices {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-motion] .reveal-target,
   html[data-motion] .reveal-target h1,
@@ -6542,4 +7492,14 @@ html[data-motion="on"] .page-hero__copy.reveal-target.is-revealed h1 {
   .impact-pathway__step:hover .impact-pathway__node {
     transform: none;
   }
+}
+
+html[data-glass] .voice-stage.glass-panel {
+  background:
+    radial-gradient(circle at 88% 5%, rgba(249, 178, 0, 0.25), transparent 16rem),
+    linear-gradient(145deg, #15130f, #1b1712 62%, #132151 135%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 28px 80px rgba(24, 18, 12, 0.2);
 }

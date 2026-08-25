@@ -73,6 +73,7 @@ const ANNUAL_REPORT_URL = readHttpsUrl(
 const pageTitles: Record<string, string> = {
   "/": "Noel Foundation | Human First. Impact Driven.",
   "/about": "About Noel Foundation",
+  "/about/faith-and-mission": "Faith & Mission | Noel Foundation",
   "/about/story": "Our Story | Noel Foundation",
   "/about/team": "Leadership | Noel Foundation",
   "/about/governance": "Governance | Noel Foundation",
@@ -82,8 +83,9 @@ const pageTitles: Record<string, string> = {
   "/programs/womens-livelihoods": "Women's Livelihoods | Noel Foundation",
   "/impact": "Our Impact | Noel Foundation",
   "/impact/live": "Verified Impact | Noel Foundation",
-  "/impact/studio": "Impact Studio | Noel Foundation",
+  "/impact/studio": "Verified Impact Dashboard | Noel Foundation",
   "/stories": "Stories | Noel Foundation",
+  "/testimonies": "Published Testimonies | Noel Foundation",
   "/events": "Events & Updates | Noel Foundation",
   "/csr": "CSR Partnerships | Noel Foundation",
   "/volunteer": "Volunteer | Noel Foundation",
@@ -99,6 +101,9 @@ const pageTitles: Record<string, string> = {
 function normalizePath(path: string) {
   const normalized = path.replace(/\/+$/, "") || "/";
   const aliases: Record<string, string> = {
+    "/about/faith": "/about/faith-and-mission",
+    "/partner": "/csr",
+    "/partner/churches": "/about/faith-and-mission",
     "/programmes": "/programs",
     "/privacy-statement": "/privacy",
     "/terms-and-conditions": "/terms",
@@ -356,6 +361,7 @@ function UtilityBar() {
 
 const aboutLinks = [
   { label: "Mission & approach", href: "/about" },
+  { label: "Faith & mission", href: "/about/faith-and-mission" },
   { label: "Our story", href: "/about/story" },
   { label: "Leadership", href: "/about/team" },
   { label: "Governance", href: "/about/governance" },
@@ -368,9 +374,15 @@ const programLinks = programs.map((program) => ({
 
 const involveLinks = [
   { label: "Volunteer", href: "/volunteer" },
-  { label: "CSR partnership", href: "/csr" },
+  { label: "Partner with us", href: "/csr" },
+  { label: "Church & faith partners", href: "/about/faith-and-mission#faith-partners" },
   { label: "Donate", href: "/donate" },
   { label: "Contact", href: "/contact" },
+];
+
+const storyLinks = [
+  { label: "Program perspectives", href: "/stories" },
+  { label: "Published testimonies", href: "/testimonies" },
 ];
 
 function DesktopMenu({
@@ -386,7 +398,13 @@ function DesktopMenu({
 }) {
   return (
     <details
-      className="desktop-menu"
+      className={
+        items.some(
+          (item) => path === item.href || (item.href !== "/" && path.startsWith(`${item.href}/`)),
+        )
+          ? "desktop-menu desktop-menu--active"
+          : "desktop-menu"
+      }
       onToggle={(event) => {
         const current = event.currentTarget;
         if (!current.open) return;
@@ -532,7 +550,6 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
           </InternalLink>
 
           <nav className="desktop-nav" aria-label="Primary navigation">
-            <DesktopMenu label="About" items={aboutLinks} path={path} navigate={navigate} />
             <DesktopMenu label="Programs" items={programLinks} path={path} navigate={navigate} />
             <InternalLink
               href="/impact"
@@ -542,36 +559,16 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
             >
               Impact
             </InternalLink>
-            <InternalLink
-              href="/stories"
-              navigate={navigate}
-              className={linkClass("/stories")}
-              aria-current={path === "/stories" ? "page" : undefined}
-            >
-              Stories
-            </InternalLink>
+            <DesktopMenu label="Stories" items={storyLinks} path={path} navigate={navigate} />
             <InternalLink
               href="/csr"
               navigate={navigate}
               className={linkClass("/csr")}
               aria-current={path === "/csr" ? "page" : undefined}
             >
-              CSR
+              Partner
             </InternalLink>
-            <DesktopMenu
-              label="Get involved"
-              items={involveLinks}
-              path={path}
-              navigate={navigate}
-            />
-            <InternalLink
-              href="/reports"
-              navigate={navigate}
-              className={linkClass("/reports")}
-              aria-current={path === "/reports" ? "page" : undefined}
-            >
-              Reports
-            </InternalLink>
+            <DesktopMenu label="About" items={aboutLinks} path={path} navigate={navigate} />
           </nav>
 
           <div className="site-nav__actions">
@@ -664,10 +661,11 @@ function Header({ path, navigate }: { path: string; navigate: Navigate }) {
                   <p className="mobile-menu__label">Explore</p>
                   {[
                     { label: "Impact", href: "/impact" },
-                    { label: "Stories", href: "/stories" },
-                    { label: "CSR partnerships", href: "/csr" },
+                    { label: "Program perspectives", href: "/stories" },
+                    { label: "Published testimonies", href: "/testimonies" },
+                    { label: "Partner with us", href: "/csr" },
                     { label: "Volunteer", href: "/volunteer" },
-                    { label: "Reports", href: "/reports" },
+                    { label: "Reports & governance", href: "/reports" },
                     { label: "Contact", href: "/contact" },
                   ].map((item) => (
                     <InternalLink
@@ -746,6 +744,9 @@ function Hero({ navigate }: { navigate: Navigate }) {
             Support our work <Icon name="arrow-up-right" />
           </InternalLink>
           <div className="home-hero__principles" aria-label="Noel Foundation commitments">
+            <span>
+              <Icon name="cross" /> Christian compassion in action
+            </span>
             <span>
               <Icon name="verified" /> Verified data only
             </span>
@@ -875,6 +876,316 @@ function WhyNoel() {
           ))}
         </div>
         <p className="section-note">We help companies move from CSR spending to CSR impact.</p>
+      </div>
+    </section>
+  );
+}
+
+function FaithInAction({ navigate }: { navigate: Navigate }) {
+  const practices: { icon: IconName; title: string; description: string }[] = [
+    {
+      icon: "heart",
+      title: "Compassion",
+      description: "Meet urgent human needs with care, humility and practical support.",
+    },
+    {
+      icon: "shield",
+      title: "Stewardship",
+      description: "Treat every contribution, partnership and story as a responsibility.",
+    },
+    {
+      icon: "spark",
+      title: "Hope",
+      description: "Help people move toward dignity, opportunity and sustainable futures.",
+    },
+  ];
+
+  return (
+    <section className="section faith-in-action" id="faith-in-action" data-reveal>
+      <div className="faith-in-action__glow" aria-hidden="true" />
+      <div className="container-shell faith-in-action__layout">
+        <div className="faith-in-action__copy">
+          <p className="eyebrow eyebrow--light">Faith in action</p>
+          <h2>
+            Rooted in Christian faith. <em>Expressed through service.</em>
+          </h2>
+          <p>
+            Christian faith shapes the spirit in which Noel Foundation seeks to serve: with
+            compassion, humility, hope and responsible stewardship. Programs remain need-driven,
+            community-centred and accountable. Support is offered according to need, without
+            requiring religious participation.
+          </p>
+          <div className="button-row">
+            <InternalLink
+              href="/about/faith-and-mission"
+              navigate={navigate}
+              className="button button--light"
+            >
+              Explore faith &amp; mission <Icon name="arrow" />
+            </InternalLink>
+            <a href="#programs" className="button button--faith-outline">
+              See faith at work
+            </a>
+          </div>
+        </div>
+
+        <aside className="faith-in-action__verse" aria-label="Christian service principle">
+          <span className="faith-in-action__cross">
+            <Icon name="cross" />
+          </span>
+          <blockquote>“Act justly. Love mercy. Walk humbly.”</blockquote>
+          <cite>Micah 6:8</cite>
+          <small>Justice in practice · mercy in relationship · humility in partnership</small>
+        </aside>
+
+        <div className="faith-practices" aria-label="Faith-led service commitments">
+          {practices.map((practice) => (
+            <article key={practice.title}>
+              <span>
+                <Icon name={practice.icon} />
+              </span>
+              <div>
+                <h3>{practice.title}</h3>
+                <p>{practice.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type PublishedVoice = {
+  id: string;
+  kind: string;
+  quote: string;
+  name: string;
+  role: string;
+  sourceLabel: string;
+  sourceHref: string;
+  icon: IconName;
+};
+
+const publishedVoices: PublishedVoice[] = [
+  {
+    id: "krish-dhanam",
+    kind: "Published endorsement",
+    quote: "Standing in the gap as a beacon of light for those that need a helping hand.",
+    name: "Krish Dhanam",
+    role: "Speaker, author and business philosopher",
+    sourceLabel: "Official endorsements page",
+    sourceHref: "https://noelfoundation.in/endorsements/",
+    icon: "spark",
+  },
+  {
+    id: "francis-einstein",
+    kind: "Faith-community endorsement",
+    quote: "You are a first class organization…",
+    name: "Francis Einstein",
+    role: "Secretary, Fellowship of Asian Christians in Kenya · as credited in 2019–20",
+    sourceLabel: "2019–20 Annual Report",
+    sourceHref:
+      "https://www.noelfoundation.in/wp-content/uploads/2020/06/NF-Annual-Report-2019-2020.pdf",
+    icon: "cross",
+  },
+  {
+    id: "origin-story",
+    kind: "Foundation reflection",
+    quote: "What began as pain became purpose.",
+    name: "Noel Foundation",
+    role: "Published origin story",
+    sourceLabel: "Official Our Story page",
+    sourceHref: "https://noelfoundation.in/about-us/our-story/",
+    icon: "heart",
+  },
+];
+
+function PublishedVoices({
+  navigate,
+  expanded = false,
+}: {
+  navigate: Navigate;
+  expanded?: boolean;
+}) {
+  const [activeId, setActiveId] = useState(publishedVoices[0].id);
+  const active = publishedVoices.find((voice) => voice.id === activeId) || publishedVoices[0];
+
+  return (
+    <section className={`section published-voices${expanded ? " published-voices--expanded" : ""}`}>
+      <div className="container-shell published-voices__shell">
+        <div className="published-voices__intro">
+          <p className="eyebrow">Published voices</p>
+          <h2>
+            Trust is built through <em>attribution.</em>
+          </h2>
+          <p>
+            These excerpts come from Noel Foundation's existing public pages and annual reporting.
+            Each voice links to its source; none is presented as verified impact data.
+          </p>
+          {!expanded ? (
+            <InternalLink href="/testimonies" navigate={navigate} className="text-link">
+              View every published testimony <Icon name="arrow" />
+            </InternalLink>
+          ) : null}
+        </div>
+
+        <div className="voice-stage glass-panel" aria-live="polite">
+          <div className="voice-stage__mark" aria-hidden="true">
+            <Icon name={active.icon} />
+          </div>
+          <p className="voice-stage__kind">{active.kind}</p>
+          <blockquote>“{active.quote}”</blockquote>
+          <div className="voice-stage__attribution">
+            <span>{active.name.charAt(0)}</span>
+            <div>
+              <strong>{active.name}</strong>
+              <small>{active.role}</small>
+            </div>
+          </div>
+          <a
+            href={active.sourceHref}
+            target="_blank"
+            rel="noreferrer"
+            className="voice-stage__source"
+          >
+            Read source: {active.sourceLabel} <Icon name="external" />
+          </a>
+        </div>
+
+        <div className="voice-tabs" role="tablist" aria-label="Choose a published voice">
+          {publishedVoices.map((voice, index) => (
+            <button
+              key={voice.id}
+              type="button"
+              role="tab"
+              aria-selected={voice.id === active.id}
+              className={voice.id === active.id ? "voice-tab voice-tab--active" : "voice-tab"}
+              onClick={() => setActiveId(voice.id)}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <span>
+                <strong>{voice.name}</strong>
+                <small>{voice.kind}</small>
+              </span>
+              <Icon name="arrow-up-right" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const audiencePathways: {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  icon: IconName;
+  assurances: string[];
+  href: string;
+  cta: string;
+}[] = [
+  {
+    id: "corporate",
+    label: "Company / foundation",
+    title: "Build a focused, reportable partnership.",
+    description:
+      "Align a health, education or livelihoods initiative with your priorities through a structured enquiry and due-diligence pathway.",
+    icon: "layers",
+    assurances: ["Program-aligned scope", "Reporting conversation", "Document request pathway"],
+    href: "/csr",
+    cta: "Design a partnership",
+  },
+  {
+    id: "church",
+    label: "Church / faith community",
+    title: "Turn shared compassion into practical service.",
+    description:
+      "Explore a program, volunteering or community partnership shaped by dignity, stewardship and responsible safeguarding.",
+    icon: "cross",
+    assurances: ["Need-led support", "No coercive participation", "Privacy-aware engagement"],
+    href: "/about/faith-and-mission#faith-partners",
+    cta: "Explore faith partnership",
+  },
+  {
+    id: "donor",
+    label: "Individual donor",
+    title: "Give with clarity and confidence.",
+    description:
+      "Choose a cause and contribution, review the stewardship approach, then continue only through approved giving instructions.",
+    icon: "heart",
+    assurances: ["Clear cause selection", "No invented outcomes", "Approved payment hand-off"],
+    href: "/donate",
+    cta: "Explore giving",
+  },
+  {
+    id: "supporter",
+    label: "Volunteer / supporter",
+    title: "Offer time, skills or a trusted connection.",
+    description:
+      "Tell the team how you would like to contribute and receive a responsible follow-up based on current program needs.",
+    icon: "people",
+    assurances: ["Role-fit enquiry", "Consent-aware follow-up", "Community-first conduct"],
+    href: "/volunteer",
+    cta: "Find your pathway",
+  },
+];
+
+function AudiencePathways({ navigate }: { navigate: Navigate }) {
+  const [activeId, setActiveId] = useState(audiencePathways[0].id);
+  const active = audiencePathways.find((pathway) => pathway.id === activeId) || audiencePathways[0];
+
+  return (
+    <section className="section audience-pathways" id="partner-pathways" data-reveal>
+      <div className="container-shell audience-pathways__grid">
+        <div className="audience-pathways__intro">
+          <p className="eyebrow">Choose your pathway</p>
+          <h2>
+            One mission. <em>A clearer next step for you.</em>
+          </h2>
+          <p>
+            A focused starting point for funders, faith communities, donors and supporters—without
+            turning human impact into a software sales funnel.
+          </p>
+          <div className="audience-tabs" role="tablist" aria-label="Choose your relationship">
+            {audiencePathways.map((pathway) => (
+              <button
+                key={pathway.id}
+                type="button"
+                role="tab"
+                aria-selected={pathway.id === active.id}
+                className={pathway.id === active.id ? "is-active" : ""}
+                onClick={() => setActiveId(pathway.id)}
+              >
+                <Icon name={pathway.icon} />
+                {pathway.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <article className="pathway-stage glass-panel" aria-live="polite">
+          <div className="pathway-stage__top">
+            <span>
+              <Icon name={active.icon} />
+            </span>
+            <small>Pathway · {active.label}</small>
+          </div>
+          <h3>{active.title}</h3>
+          <p>{active.description}</p>
+          <div className="pathway-assurances">
+            {active.assurances.map((assurance) => (
+              <span key={assurance}>
+                <Icon name="check" /> {assurance}
+              </span>
+            ))}
+          </div>
+          <InternalLink href={active.href} navigate={navigate} className="button button--dark">
+            {active.cta} <Icon name="arrow" />
+          </InternalLink>
+        </article>
       </div>
     </section>
   );
@@ -1612,6 +1923,13 @@ function GetInvolved({ navigate }: { navigate: Navigate }) {
       href: "/csr",
       cta: "Start a conversation",
     },
+    {
+      icon: "cross",
+      title: "Faith community",
+      description: "Explore service with a church or faith-based organisation.",
+      href: "/about/faith-and-mission#faith-partners",
+      cta: "Explore partnership",
+    },
   ];
   return (
     <section className="section">
@@ -1907,8 +2225,9 @@ function HomePage({ navigate }: { navigate: Navigate }) {
       <ProgramCards navigate={navigate} />
       <Approach />
       <ImpactPreview navigate={navigate} />
-      <StoryShowcase navigate={navigate} />
-      <CSRPreview navigate={navigate} />
+      <FaithInAction navigate={navigate} />
+      <PublishedVoices navigate={navigate} />
+      <AudiencePathways navigate={navigate} />
       <GovernancePreview navigate={navigate} />
       <GetInvolved navigate={navigate} />
       <ContactSection />
@@ -2132,6 +2451,164 @@ function AboutPage({ path, navigate }: { path: string; navigate: Navigate }) {
             ))}
             <InternalLink href="/reports" navigate={navigate} className="button button--light">
               View reports & documents <Icon name="arrow" />
+            </InternalLink>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function FaithPage({ navigate }: { navigate: Navigate }) {
+  const serviceCommitments: { icon: IconName; title: string; description: string }[] = [
+    {
+      icon: "heart",
+      title: "Compassion",
+      description: "See the person before the program and respond to need with practical care.",
+    },
+    {
+      icon: "people",
+      title: "Dignity",
+      description: "Serve people of every background with respect and without coercion.",
+    },
+    {
+      icon: "shield",
+      title: "Stewardship",
+      description:
+        "Handle funds, partnerships, information and stories as entrusted responsibilities.",
+    },
+    {
+      icon: "spark",
+      title: "Hope",
+      description: "Pair encouragement with pathways toward health, learning and livelihoods.",
+    },
+  ];
+
+  const partnerModels = [
+    {
+      number: "01",
+      title: "Program partnership",
+      description: "Support an approved health, education or livelihoods initiative.",
+    },
+    {
+      number: "02",
+      title: "Volunteer engagement",
+      description: "Offer appropriate professional skills, time or community connections.",
+    },
+    {
+      number: "03",
+      title: "Community mobilisation",
+      description: "Help responsible outreach reach people while preserving dignity and privacy.",
+    },
+  ];
+
+  return (
+    <>
+      <PageHero
+        eyebrow="Faith & mission"
+        title={
+          <>
+            Christian faith. <em>Compassion made practical.</em>
+          </>
+        }
+        description="Christian conviction shapes the spirit of Noel Foundation's service: compassion, humility, hope and responsible stewardship. Support is offered according to need, without requiring religious participation."
+        image="/images/community-relief.jpg"
+        imageAlt="Noel Foundation team members and community members during a relief initiative"
+      >
+        <a href="#service-covenant" className="button button--primary">
+          Read our service covenant <Icon name="arrow" />
+        </a>
+        <InternalLink href="/contact" navigate={navigate} className="button button--secondary">
+          Start a conversation
+        </InternalLink>
+      </PageHero>
+
+      <section className="section faith-covenant" id="service-covenant" data-reveal>
+        <div className="container-shell">
+          <div className="faith-covenant__heading">
+            <SectionHeading
+              eyebrow="Our service covenant"
+              title={
+                <>
+                  Faith is expressed in <em>how people are treated.</em>
+                </>
+              }
+              description="These commitments translate faith language into conduct that funders, communities and supporters can evaluate."
+            />
+            <div className="faith-covenant__principle glass-panel">
+              <Icon name="cross" />
+              <p>
+                <strong>Service before symbolism.</strong>
+                Programs remain need-led, professionally coordinated, consent-aware and accountable.
+              </p>
+            </div>
+          </div>
+          <div className="faith-covenant__grid">
+            {serviceCommitments.map((commitment, index) => (
+              <article key={commitment.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <Icon name={commitment.icon} />
+                <h2>{commitment.title}</h2>
+                <p>{commitment.description}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section faith-source" data-reveal>
+        <div className="container-shell faith-source__grid">
+          <div>
+            <p className="eyebrow eyebrow--light">A published faith voice</p>
+            <blockquote>
+              “To God be the glory for great things he has done through your effort.”
+            </blockquote>
+            <p>
+              Krish &amp; Anila Dhanam · appreciation letter published in Noel Foundation's 2019–20
+              Annual Report
+            </p>
+          </div>
+          <a
+            href="https://www.noelfoundation.in/wp-content/uploads/2020/06/NF-Annual-Report-2019-2020.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="faith-source__link"
+          >
+            <span>
+              <Icon name="report" />
+            </span>
+            <span>
+              <strong>Read the historic source</strong>
+              <small>2019–20 Annual Report · published endorsement</small>
+            </span>
+            <Icon name="external" />
+          </a>
+        </div>
+      </section>
+
+      <section className="section section--cream faith-partners" id="faith-partners">
+        <div className="container-shell faith-partners__grid">
+          <SectionHeading
+            eyebrow="Churches & faith-based organisations"
+            title={
+              <>
+                Shared compassion. <em>Responsible partnership.</em>
+              </>
+            }
+            description="Faith communities can explore a focused partnership while safeguarding beneficiary choice, privacy and program integrity."
+          />
+          <div className="faith-partner-list">
+            {partnerModels.map((model) => (
+              <article key={model.number}>
+                <span>{model.number}</span>
+                <div>
+                  <h3>{model.title}</h3>
+                  <p>{model.description}</p>
+                </div>
+              </article>
+            ))}
+            <InternalLink href="/contact" navigate={navigate} className="button button--dark">
+              Discuss a faith-community partnership <Icon name="arrow" />
             </InternalLink>
           </div>
         </div>
@@ -2396,7 +2873,7 @@ function ImpactPage({ path, navigate }: { path: string; navigate: Navigate }) {
 type StoryCollectionItem = {
   id: string;
   tag: "Children's Health" | "Education" | "Community" | "Women's Livelihoods";
-  format: "Human story" | "Field archive";
+  format: "Program perspective" | "Field archive";
   title: string;
   description: string;
   image: string;
@@ -2409,7 +2886,7 @@ const storyCollectionItems: StoryCollectionItem[] = [
     ...story,
     id: `program-story-${index + 1}`,
     tag: story.tag as StoryCollectionItem["tag"],
-    format: "Human story" as const,
+    format: "Program perspective" as const,
   })),
   {
     id: "care-visit",
@@ -2447,7 +2924,7 @@ const storyCollectionItems: StoryCollectionItem[] = [
   {
     id: "women-livelihoods",
     tag: "Women's Livelihoods",
-    format: "Human story",
+    format: "Program perspective",
     title: "Capability can become independence",
     description:
       "Skills, tools and practical linkages create a pathway through which women can pursue income with greater agency.",
@@ -2490,31 +2967,31 @@ function StoriesPage({ navigate }: { navigate: Navigate }) {
   return (
     <>
       <PageHero
-        eyebrow="Stories of Impact"
+        eyebrow="Stories & program perspectives"
         title={
           <>
-            Behind every number, <em>a life.</em>
+            Behind every number, <em>a person.</em>
           </>
         }
-        description="A child receiving heart surgery. A student continuing her education. A mother earning her first independent income. These are not statistics — they are lives transformed."
+        description="Explore privacy-aware program perspectives and field archives. Direct beneficiary testimony is published only after consent, fact review and safeguarding approval."
         image="/images/household-relief.jpg"
         imageAlt="A Noel Foundation representative delivering household support during community outreach"
       >
         <a href="#story-collection" className="button button--primary">
-          Explore human stories <Icon name="arrow" />
+          Explore program perspectives <Icon name="arrow" />
         </a>
       </PageHero>
       <section className="section story-collection-section" id="story-collection" data-reveal>
         <div className="container-shell">
           <div className="story-collection__intro">
             <SectionHeading
-              eyebrow="Human Stories"
+              eyebrow="Program perspectives"
               title={
                 <>
-                  Behind Every Number Is a <em>Human Story.</em>
+                  People are never just <em>content.</em>
                 </>
               }
-              description="A child receiving heart surgery. A student continuing her education. A mother earning her first independent income. These are not statistics — they are lives transformed."
+              description="These perspectives explain how support can work without presenting illustrative journeys as consented beneficiary testimony."
             />
             <div className="collection-index glass-panel">
               <Icon name="layers" />
@@ -2613,7 +3090,7 @@ function StoriesPage({ navigate }: { navigate: Navigate }) {
                   role="group"
                   aria-label="Filter stories by collection type"
                 >
-                  {["All formats", "Human story", "Field archive"].map((item) => (
+                  {["All formats", "Program perspective", "Field archive"].map((item) => (
                     <button
                       key={item}
                       type="button"
@@ -2718,6 +3195,90 @@ function StoriesPage({ navigate }: { navigate: Navigate }) {
           )}
         </div>
       </section>
+      <GetInvolved navigate={navigate} />
+    </>
+  );
+}
+
+function TestimoniesPage({ navigate }: { navigate: Navigate }) {
+  const publicationStandards: { icon: IconName; title: string; description: string }[] = [
+    {
+      icon: "verified",
+      title: "Attributed source",
+      description: "Every published voice identifies where the wording already appears publicly.",
+    },
+    {
+      icon: "shield",
+      title: "Consent before exposure",
+      description:
+        "Beneficiary names, photographs and medical details require documented publication permission.",
+    },
+    {
+      icon: "report",
+      title: "Evidence stays separate",
+      description:
+        "A testimony offers perspective; it never substitutes for verified outcome data.",
+    },
+  ];
+
+  return (
+    <>
+      <PageHero
+        eyebrow="Testimonies & published voices"
+        title={
+          <>
+            Human words. <em>Honest context.</em>
+          </>
+        }
+        description="A sourced collection of public endorsements and Foundation reflections. New beneficiary testimonies will appear only after consent, fact review and safeguarding approval."
+        image="/images/outreach-team.jpg"
+        imageAlt="Noel Foundation outreach team members during a community initiative"
+      >
+        <a href="#published-voices" className="button button--primary">
+          Read published voices <Icon name="arrow" />
+        </a>
+        <InternalLink href="/reports" navigate={navigate} className="button button--secondary">
+          Review trust material
+        </InternalLink>
+      </PageHero>
+
+      <div id="published-voices">
+        <PublishedVoices navigate={navigate} expanded />
+      </div>
+
+      <section className="section section--cream testimony-standards">
+        <div className="container-shell">
+          <SectionHeading
+            eyebrow="Testimony integrity"
+            title={
+              <>
+                Dignity is part of <em>the evidence standard.</em>
+              </>
+            }
+            description="The strongest story is one the speaker understands, approves and can withdraw—without affecting their access to support."
+            align="center"
+          />
+          <div className="testimony-standards__grid">
+            {publicationStandards.map((standard) => (
+              <article key={standard.title}>
+                <span>
+                  <Icon name={standard.icon} />
+                </span>
+                <h2>{standard.title}</h2>
+                <p>{standard.description}</p>
+              </article>
+            ))}
+          </div>
+          <div className="testimony-standards__note">
+            <Icon name="shield" />
+            <p>
+              <strong>No public testimony submission form is enabled.</strong>
+              Publication remains a reviewed organisational workflow, not an automatic website post.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <GetInvolved navigate={navigate} />
     </>
   );
@@ -4429,7 +4990,8 @@ function Footer({ navigate }: { navigate: Navigate }) {
       title: "Resources",
       links: [
         { label: "Impact", href: "/impact" },
-        { label: "Reports", href: "/reports" },
+        { label: "Published testimonies", href: "/testimonies" },
+        { label: "Reports & governance", href: "/reports" },
         { label: "Events", href: "/events" },
         { label: "Accessibility", href: "/accessibility" },
       ],
@@ -4545,8 +5107,8 @@ function ExperienceDock({
   const dockLinks: { label: string; shortLabel: string; href: string; icon: IconName }[] = [
     { label: "Home", shortLabel: "Home", href: "/", icon: "home" },
     { label: "Programs", shortLabel: "Programs", href: "/programs", icon: "layers" },
-    { label: "Impact Studio", shortLabel: "Impact", href: "/impact/studio", icon: "analytics" },
-    { label: "Story Collections", shortLabel: "Stories", href: "/stories", icon: "grid" },
+    { label: "Verified impact", shortLabel: "Impact", href: "/impact", icon: "analytics" },
+    { label: "Program perspectives", shortLabel: "Stories", href: "/stories", icon: "grid" },
     { label: "Donate", shortLabel: "Donate", href: "/donate", icon: "heart" },
   ];
 
@@ -4614,8 +5176,8 @@ function ExperienceDock({
         >
           <header>
             <div>
-              <p className="eyebrow">Experience console</p>
-              <h2>Explore your way.</h2>
+              <p className="eyebrow">Display & shortcuts</p>
+              <h2>Your browsing preferences.</h2>
             </div>
             <button
               type="button"
@@ -4660,31 +5222,31 @@ function ExperienceDock({
             </button>
           </div>
           <nav aria-label="Experience shortcuts">
-            <InternalLink href="/impact/studio" navigate={navigate}>
+            <InternalLink href="/impact" navigate={navigate}>
               <span>
                 <Icon name="analytics" />
-                <strong>Impact Studio</strong>
+                <strong>Verified impact dashboard</strong>
               </span>
               <Icon name="arrow" />
             </InternalLink>
-            <InternalLink href="/stories#collection-controls" navigate={navigate}>
+            <InternalLink href="/testimonies" navigate={navigate}>
               <span>
-                <Icon name="filter" />
-                <strong>Story filters</strong>
+                <Icon name="spark" />
+                <strong>Published testimonies</strong>
+              </span>
+              <Icon name="arrow" />
+            </InternalLink>
+            <InternalLink href="/about/faith-and-mission" navigate={navigate}>
+              <span>
+                <Icon name="cross" />
+                <strong>Faith & mission</strong>
               </span>
               <Icon name="arrow" />
             </InternalLink>
             <InternalLink href="/csr#csr-builder" navigate={navigate}>
               <span>
                 <Icon name="link" />
-                <strong>CSR builder</strong>
-              </span>
-              <Icon name="arrow" />
-            </InternalLink>
-            <InternalLink href="/donate" navigate={navigate}>
-              <span>
-                <Icon name="wallet" />
-                <strong>Donation flow</strong>
+                <strong>Partner enquiry</strong>
               </span>
               <Icon name="arrow" />
             </InternalLink>
@@ -4708,6 +5270,7 @@ function ExperienceDock({
 
 function AppRoutes({ path, navigate }: { path: string; navigate: Navigate }) {
   if (path === "/") return <HomePage navigate={navigate} />;
+  if (path === "/about/faith-and-mission") return <FaithPage navigate={navigate} />;
   if (["/about", "/about/story", "/about/team", "/about/governance"].includes(path))
     return <AboutPage path={path} navigate={navigate} />;
   if (
@@ -4722,6 +5285,7 @@ function AppRoutes({ path, navigate }: { path: string; navigate: Navigate }) {
   if (path === "/impact" || path === "/impact/live" || path === "/impact/studio")
     return <ImpactPage path={path} navigate={navigate} />;
   if (path === "/stories") return <StoriesPage navigate={navigate} />;
+  if (path === "/testimonies") return <TestimoniesPage navigate={navigate} />;
   if (path === "/events") return <EventsPage navigate={navigate} />;
   if (path === "/csr") return <CSRPage navigate={navigate} />;
   if (path === "/volunteer") return <VolunteerPage navigate={navigate} />;
